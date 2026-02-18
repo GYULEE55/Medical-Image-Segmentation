@@ -1,0 +1,28 @@
+# 데이터 & 모델 (용량 큼)
+data/
+datasets/
+*.zip
+*.pt
+*.pth
+*.onnx
+
+# 학습 결과
+runs/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# DB (로컬 실험용)
+*.db
