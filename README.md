@@ -1,4 +1,4 @@
-# Medical Image Segmentation — Polyp Detection
+# Medical Image Segmentation — Polyp Detection(26.01.26 ~ 26.02.08)
 
 > YOLOv8n-seg 기반 위장 내시경 폴립(Polyp) 세그멘테이션 프로젝트
 
