@@ -1,0 +1,9 @@
+venv/
+data/
+datasets/
+runs/
+db/
+__pycache__/
+*.pyc
+.git
+*.md

@@ -1,21 +1,42 @@
 # 개인 문서 (이력서, 포트폴리오 — GitHub에 올리면 안됨)
 resume_lee/
 
+# 데이터 & 모델 (용량 큼)
+data/
+datasets/
+*.zip
+*.pt
+*.pth
+*.onnx
+
+# 학습 결과
+runs/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
 # Windows 아티팩트
 nul
-Thumbs.db
 
 # IDE / 도구
 .claude/
 .vscode/
 .idea/
 
-# Python
-__pycache__/
-*.pyc
-venv/
-.venv/
-.ipynb_checkpoints/
+# DB (로컬 실험용)
+*.db
 
-# OS
-.DS_Store
+# 환경변수
+.env
+.env.*
+
+# RAG 벡터스토어
+rag/vectorstore/
