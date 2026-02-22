@@ -1,0 +1,22 @@
+venv/
+data/
+datasets/
+runs/
+db/
+__pycache__/
+*.pyc
+.git
+*.md
+.env
+.env.*
+
+# RAG 데이터 (볼륨 마운트로 관리)
+rag/vectorstore/
+rag/docs/
+rag/__pycache__/
+
+# 테스트/학습 (배포 이미지에 불필요)
+tests/
+training/
+preprocessing/
+vlm/

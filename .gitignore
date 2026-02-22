@@ -1,0 +1,21 @@
+# 개인 문서 (이력서, 포트폴리오 — GitHub에 올리면 안됨)
+resume_lee/
+
+# Windows 아티팩트
+nul
+Thumbs.db
+
+# IDE / 도구
+.claude/
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
