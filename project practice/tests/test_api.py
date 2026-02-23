@@ -104,6 +104,14 @@ class TestHealth:
         assert "vectorstore_path" in data
         assert "vectorstore_exists" in data
 
+    def test_health_v4_vlm_info(self, client):
+        """V4 VLM 상태 정보가 health 응답에 포함되는지"""
+        data = client.get("/health").json()
+        assert "v4_vlm" in data
+        assert "loaded" in data["v4_vlm"]
+        assert "model" in data["v4_vlm"]
+        assert "host" in data["v4_vlm"]
+
 
 # ══════════════════════════════════════════════════════════════════
 # 2. Predict 엔드포인트 테스트 (V1: YOLOv8 세그멘테이션)
@@ -367,3 +375,55 @@ class TestAnalyze:
             data={"model_type": "nonexistent"},
         )
         assert response.status_code == 400
+
+
+# ══════════════════════════════════════════════════════════════════
+# 6. VLM 통합 분석 엔드포인트 테스트 (V4: VLM + Detection + RAG)
+# ══════════════════════════════════════════════════════════════════
+class TestVLMAnalyze:
+    """POST /vlm-analyze — V4 멀티모달 통합 분석"""
+
+    def test_vlm_analyze_returns_valid_response(self, client, sample_image_bytes):
+        """유효한 이미지 요청 시 V4 응답 구조 검증"""
+        response = client.post(
+            "/vlm-analyze",
+            files={"file": ("test.jpg", sample_image_bytes, "image/jpeg")},
+        )
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "filename" in data
+        assert "image_size" in data
+        assert "model_type" in data
+        assert "detections" in data
+        assert "count" in data
+        assert "vlm_analysis" in data
+        assert "medical_evidence" in data
+        assert "rag_available" in data
+        assert "vlm_available" in data
+
+    def test_vlm_analyze_non_image_file_returns_400(self, client):
+        """이미지가 아닌 파일 업로드 시 400 반환"""
+        response = client.post(
+            "/vlm-analyze",
+            files={"file": ("doc.pdf", b"fake", "application/pdf")},
+        )
+        assert response.status_code == 400
+
+    def test_vlm_analyze_invalid_image_bytes_returns_400(self, client):
+        """잘못된 이미지 바이트 업로드 시 400 반환"""
+        response = client.post(
+            "/vlm-analyze",
+            files={"file": ("broken.jpg", b"not an image", "image/jpeg")},
+        )
+        assert response.status_code == 400
+
+    def test_vlm_analyze_with_custom_model_type(self, client, sample_image_bytes):
+        """model_type 파라미터 전달 시 응답 반영 확인"""
+        response = client.post(
+            "/vlm-analyze",
+            files={"file": ("test.jpg", sample_image_bytes, "image/jpeg")},
+            data={"model_type": "polyp", "conf": 0.35},
+        )
+        assert response.status_code == 200
+        assert response.json()["model_type"] == "polyp"

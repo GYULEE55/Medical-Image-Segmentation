@@ -1,6 +1,6 @@
-# Medical AI Assistant — Vision + LLM 통합 서비스
+# Medical AI Assistant — Vision + LLM + VLM 통합 서비스
 
-> 의료 영상 병변 검출(YOLOv8) + 의료 지식 RAG(LangChain/GPT-4o-mini) 통합 파이프라인
+> 의료 영상 병변 검출(YOLOv8) + 의료 지식 RAG + VLM(LLaVA) 통합 파이프라인
 
 의료 영상에서 병변을 검출하고, 검출 결과를 기반으로 **논문/가이드라인 기반 의료 지식을 자동 제공**하는 End-to-End 의료 AI 서비스입니다.
 
@@ -8,23 +8,21 @@
 
 ---
 
-## 핵심 기능: Vision + LLM 통합 (`POST /analyze`)
+## 핵심 기능: V4 멀티모달 통합 (`POST /vlm-analyze`)
 
 ```
 의료 이미지 업로드 (내시경 / X-ray)
         │
-   [YOLOv8-seg] 병변 검출 + 세그멘테이션  ← model_type: polyp / dental
+   [VLM: LLaVA] 이미지 직접 해석 (정성적 소견)
         │
-        ├─ 검출 결과: 위치, 신뢰도, 마스크 좌표
+   [YOLOv8-seg] 병변 검출 + 세그멘테이션 (정량 지표)
         │
-        └─ 자동 RAG 질의 생성
-               │
-          [ChromaDB + GPT-4o-mini]
-               │
-               └─ 의료 지식: 임상적 의미, 추적 관찰 주기, 환자 안내사항 + 출처(논문/가이드라인)
+   [RAG] VLM 소견 기반 문헌 근거 보강
+        │
+        └─ 통합 응답: VLM 해석 + bbox/mask + 출처 기반 의료 지식
 ```
 
-**왜 이 구조인가**: 검출 모델만 있으면 "폴립 있음"에서 끝남. 실제 임상에서는 **"이 폴립이 무엇이고, 어떻게 관리해야 하는지"** 가 필요함. Vision이 발견하고, LLM이 설명하는 구조.
+**왜 V4가 필요한가**: 검출 모델만 있으면 "검출된 클래스" 기준 설명에 갇힘. VLM은 이미지를 직접 해석해서 학습하지 않은 이상 소견도 기술할 수 있고, RAG가 문헌 근거를 붙여 신뢰성을 높임.
 
 **왜 멀티모델인가**: 하나의 도메인(폴립)만으로는 범용성이 부족. **동일 아키텍처를 다른 의료 도메인(치과)에 적용**하여 확장 가능성을 증명.
 
@@ -130,11 +128,12 @@ best.pt (학습된 가중치, 6.5MB)
         │
         ▼
 ┌───────────────────────────────────────────────┐
-│  api/app.py — FastAPI 서버 (V3)               │
+│  api/app.py — FastAPI 서버 (V4)               │
 │                                               │
 │  POST /predict  → YOLOv8 검출 (V1)           │
 │  POST /ask      → RAG 의료 Q&A (V2)         │
-│  POST /analyze  → Vision + LLM 통합 (V3)    │  ← 핵심
+│  POST /analyze      → Detection + RAG (V3)    │
+│  POST /vlm-analyze  → VLM + Detection + RAG (V4) │  ← 핵심
 │                                               │
 │  rag/chain.py   → LangChain LCEL 파이프라인   │
 │  rag/ingest.py  → PDF → ChromaDB 인덱싱      │
@@ -150,7 +149,7 @@ Dockerfile + docker-compose.yml      # 컨테이너화 배포
 
 ```
 ├── api/                        # API 서버
-│   └── app.py                  #   V1(predict) + V2(ask) + V3(analyze)
+│   └── app.py                  #   V1(predict) + V2(ask) + V3(analyze) + V4(vlm-analyze)
 │
 ├── rag/                        # RAG 파이프라인
 │   ├── chain.py                #   LangChain LCEL + ChromaDB + GPT-4o-mini
@@ -172,7 +171,7 @@ Dockerfile + docker-compose.yml      # 컨테이너화 배포
 │   └── experiments.db          #   실험 DB (Kvasir-SEG 결과 저장됨)
 │
 ├── tests/                      # 테스트
-│   ├── test_api.py             #   pytest 25개 (V1+V2+V3+멀티모델)
+│   ├── test_api.py             #   pytest 30개 (V1+V2+V3+V4)
 │   └── test_yolo.py            #   YOLOv8 추론 테스트
 │
 ├── Dockerfile                  # Docker (CPU-only PyTorch + RAG)
@@ -243,6 +242,32 @@ curl -X POST http://localhost:8000/analyze \
   -F "file=@dental_xray.jpg" -F "conf=0.25" -F "model_type=dental"
 ```
 
+### `POST /vlm-analyze` — V4: VLM + Detection + RAG 통합 분석
+
+```bash
+# VLM 직접 해석 + YOLOv8 검출 + RAG 근거 보강
+curl -X POST http://localhost:8000/vlm-analyze \
+  -F "file=@endoscopy.jpg" -F "conf=0.25" -F "model_type=polyp"
+```
+
+**Response (V4):**
+```json
+{
+  "model_type": "polyp",
+  "vlm_analysis": {
+    "interpretation": "내시경 영상에서 표면이 융기된 병변이 관찰됩니다...",
+    "model": "llava",
+    "duration_ms": 21437
+  },
+  "detections": [{"class": "polyp", "confidence": 0.92, "bbox": [...]}],
+  "medical_evidence": {
+    "query_source": "vlm",
+    "answer": "해당 소견은 선종성 폴립 가능성이 있으며...",
+    "sources": [{"source_file": "guideline.pdf", "page": "3"}]
+  }
+}
+```
+
 **Response (V3):**
 ```json
 {
@@ -291,6 +316,7 @@ curl -X POST http://localhost:8000/analyze \
 | **Training** | Google Colab T4 | 무료 GPU, 50 epochs ~48분 |
 | **Serving** | FastAPI + Uvicorn | async 지원, 자동 API 문서 (Swagger) |
 | **RAG** | LangChain 0.3.27 LCEL | 최신 패턴, 체인 조립 유연 |
+| **VLM** | ollama + LLaVA | 이미지 직접 해석, 로컬 실행 가능 |
 | **Embedding** | BAAI/bge-m3 | 한국어+영어 동시 지원, 의료 문서 최적화 |
 | **VectorDB** | ChromaDB | 경량, 로컬 실행, 별도 서버 불필요 |
 | **LLM** | GPT-4o-mini | 저렴(약 $0.15/1M tokens) + 충분한 품질 |

@@ -28,7 +28,7 @@
 
 ---
 
-## 3. 아키텍처 진화 — V1 → V2 → V3
+## 3. 아키텍처 진화 — V1 → V2 → V3 → V4
 
 ### V1: 폴립 세그멘테이션 (YOLOv8n-seg)
 ```
@@ -51,8 +51,16 @@
 - `/predict`와 `/ask`가 독립적이었던 문제를 **하나의 파이프라인으로 연결**
 - `class_names_kr` 매핑으로 한국어 질의 자동 생성
 
+### V4: VLM + Detection + RAG 통합 (`POST /vlm-analyze`) ← 확장 핵심
+```
+이미지 → [VLM(LLaVA) 직접 해석] + [YOLOv8 정량 검출] → VLM 소견 기반 RAG 근거 보강
+```
+- V3의 한계(검출 클래스 의존)를 보완: VLM이 이미지 전체를 자연어로 해석
+- 검출 모델이 놓칠 수 있는 소견을 VLM이 보조하고, RAG가 문헌 근거를 추가
+- 결과적으로 "정량(bbox/mask) + 정성(VLM 해석) + 근거(RAG)" 3축 응답 제공
+
 ### 💡 면접 포인트
-> "V1에서 V3까지 **점진적으로 발전**시켰습니다. V1은 Detection만, V2에서 RAG를 추가하고, V3에서 두 모듈을 **자동 연동**하는 파이프라인을 만들었습니다. 이 과정에서 **독립적인 모듈을 어떻게 연결할 것인가**라는 시스템 설계 문제를 해결했습니다."
+> "V1에서 V4까지 **점진적으로 발전**시켰습니다. V1은 Detection만, V2는 RAG, V3는 Detection+RAG 자동 연동, V4는 VLM까지 통합해 이미지 직접 해석 능력을 추가했습니다. 단순 모델 성능을 넘어서 **모듈 간 인터페이스 설계와 신뢰성 보강(RAG 근거)**을 해결한 시스템 프로젝트입니다."
 
 ---
 
@@ -239,8 +247,8 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 ## 7. 엔지니어링 실천 사항
 
 ### 7-1. 테스트
-- pytest **25개** (Health 4, Predict 8, Validation 4, RAG 3, Analyze 6)
-- V1/V2/V3 각 엔드포인트 + 멀티모델 파라미터 테스트 포함
+- pytest **30개** (V4 `/vlm-analyze` 포함)
+- V1/V2/V3/V4 엔드포인트 + 멀티모델 파라미터 테스트 포함
 - 잘못된 model_type 입력 시 400 에러 반환 검증
 - CI 환경(OpenAI 키 없음)에서도 skip 처리로 깨지지 않음
 

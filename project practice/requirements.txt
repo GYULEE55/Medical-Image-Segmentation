@@ -25,6 +25,9 @@ pymupdf>=1.24.0
 # OpenAI API
 openai>=1.40.0
 
+# VLM (ollama REST 호출)
+httpx>=0.27.0
+
 # 환경변수 관리
 python-dotenv>=1.0.0
 

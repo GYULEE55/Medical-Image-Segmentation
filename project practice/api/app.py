@@ -1,16 +1,18 @@
 """
-Medical AI Assistant API — V3 (YOLOv8 + RAG + Multi-Model)
+Medical AI Assistant API — V4 (YOLOv8 + RAG + VLM + Multi-Model)
 
 엔드포인트:
-  GET  /health          — 서버 상태 확인
+  GET  /health          — 서버 상태 확인 (모델 + RAG + VLM)
   POST /predict         — 병변 세그멘테이션 (YOLOv8) [V1] — model 파라미터로 polyp/dental 선택
   POST /ask             — 의료 지식 Q&A (RAG) [V2]
-  POST /analyze         — 이미지 검출 + 의료 지식 통합 분석 [V3 핵심]
+  POST /analyze         — 이미지 검출 + 의료 지식 통합 분석 [V3]
+  POST /vlm-analyze     — VLM 직접 해석 + 검출 + RAG 근거 보강 [V4 핵심]
   GET  /ask/health      — RAG 상태 확인
 
 V1: YOLOv8n-seg로 병변 검출 + 세그멘테이션 (polyp/dental 멀티모델)
 V2: LangChain + ChromaDB + GPT-4o-mini로 의료 지식 Q&A (출처 포함)
 V3: Vision(YOLOv8) + LLM(RAG) 통합 — 검출 결과를 기반으로 의료 지식 자동 제공
+V4: VLM(LLaVA)이 이미지 직접 해석 → YOLOv8 검출 → RAG 문헌 근거 보강
 """
 
 import os
@@ -38,6 +40,7 @@ MODEL_PATHS: Dict[str, str] = {
 # ── 전역 상태 ──────────────────────────────────────────────────
 models: Dict[str, YOLO] = {}  # 멀티모델 딕셔너리 {"polyp": YOLO, "dental": YOLO}
 rag_chain = None   # RAG 체인 (V2)
+vlm_client = None  # VLM 클라이언트 (V4)
 
 
 # ── 앱 초기화 (lifespan 패턴) ──────────────────────────────────
@@ -45,7 +48,7 @@ rag_chain = None   # RAG 체인 (V2)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """서버 시작 시 모델 초기화 (1회만 실행)"""
-    global models, rag_chain
+    global models, rag_chain, vlm_client
 
     # V1: YOLOv8 모델 로드 (멀티모델 — 존재하는 모델만 로드)
     for model_name, model_path in MODEL_PATHS.items():
@@ -70,13 +73,30 @@ async def lifespan(app: FastAPI):
     else:
         print("[V2] RAG 벡터스토어 없음 — 'python rag/ingest.py' 먼저 실행 필요")
 
+    # V4: VLM 클라이언트 초기화 (ollama + LLaVA)
+    try:
+        from vlm.client import MedicalVLMClient
+        vlm_client = MedicalVLMClient()
+        if await vlm_client.is_available():
+            print(f"[V4] VLM 초기화 완료 (모델: {vlm_client.model})")
+        else:
+            print(f"[V4] VLM 모델 미설치 또는 ollama 서버 미실행 — VLM 기능 비활성화")
+            print(f"     ollama serve → ollama pull {vlm_client.model}")
+    except Exception as e:
+        print(f"[V4] VLM 초기화 실패 (계속 진행): {e}")
+        vlm_client = None
+
     yield  # 서버 실행
+
+    # 서버 종료 시 VLM 클라이언트 정리
+    if vlm_client is not None:
+        await vlm_client.close()
 
 
 app = FastAPI(
     title="Medical AI Assistant API",
     description="""
-## Medical AI Assistant — Vision + LLM 통합 서비스
+## Medical AI Assistant — Vision + LLM + VLM 통합 서비스
 
 ### V1: 폴립 세그멘테이션
 - `POST /predict` — 내시경 이미지 업로드 → 폴립 검출 + 마스크
@@ -84,10 +104,13 @@ app = FastAPI(
 ### V2: 의료 지식 RAG
 - `POST /ask` — 의료 질문 → 근거 문헌 기반 답변 + 출처
 
-### V3: 통합 분석 (Vision + LLM)
+### V3: 통합 분석 (Detection + RAG)
 - `POST /analyze` — 이미지 검출 → 검출 결과 기반 자동 RAG 질의 → 의료 지식 포함 응답
+
+### V4: VLM 통합 분석 (VLM + Detection + RAG)
+- `POST /vlm-analyze` — VLM이 이미지 직접 해석 → YOLOv8 검출 보완 → RAG 문헌 근거 보강
     """,
-    version="3.0.0",
+    version="4.0.0",
     lifespan=lifespan,
 )
 
@@ -122,6 +145,11 @@ def health():
         },
         "v2_rag": {
             "loaded": rag_chain is not None,
+        },
+        "v4_vlm": {
+            "loaded": vlm_client is not None,
+            "model": vlm_client.model if vlm_client else None,
+            "host": vlm_client.host if vlm_client else None,
         },
     }
 
@@ -370,3 +398,176 @@ async def analyze_with_knowledge(
         "medical_knowledge": medical_knowledge,
         "rag_available": rag_chain is not None,
     }
+
+
+# ── V4: VLM 통합 분석 엔드포인트 (VLM + Detection + RAG) ──────
+# V3와의 핵심 차이:
+# - V3: YOLOv8 검출 → 클래스명 → RAG (검출 모델에 의존)
+# - V4: VLM이 이미지 직접 해석 → RAG 근거 보강 + YOLOv8 정량 검출 병행
+# 면접 포인트:
+#   "V3는 Detection 모델의 출력에 의존하지만, V4는 VLM이 이미지를 직접 이해합니다.
+#    학습 데이터에 없는 희귀 병변도 VLM의 일반적 의료 지식으로 해석 가능하고,
+#    RAG가 문헌 근거를 덧붙여 신뢰성을 높입니다."
+@app.post("/vlm-analyze")
+async def vlm_analyze_with_knowledge(
+    file: UploadFile = File(..., description="분석할 의료 이미지"),
+    conf: float = 0.25,
+    model_type: str = Form("polyp", description="YOLOv8 모델 선택: polyp / dental"),
+    language: str = Form("ko", description="VLM 분석 언어: ko(한국어) / en(영어)"),
+):
+    """
+    [V4] VLM + Detection + RAG 통합 분석
+
+    3단계 파이프라인:
+      1단계: VLM(LLaVA)이 이미지를 직접 해석 → 자연어 소견 생성
+      2단계: YOLOv8로 정량적 병변 검출 (bbox, mask, confidence)
+      3단계: VLM 소견을 기반으로 RAG에 문헌 근거 질의 → 근거 보강
+
+    V3와의 차이:
+      - V3: 검출된 클래스명 → RAG (검출 못하면 설명도 불가)
+      - V4: VLM이 자유 형식으로 해석 → 학습 안 된 병변도 설명 가능
+
+    - **file**: 내시경/X-ray 이미지 파일
+    - **conf**: YOLOv8 confidence threshold (기본 0.25)
+    - **model_type**: YOLOv8 모델 — "polyp" 또는 "dental"
+    - **language**: VLM 분석 언어 — "ko"(한국어, 기본) 또는 "en"(영어)
+    """
+    # ── 이미지 읽기 ──
+    if file.content_type and not file.content_type.startswith("image/"):
+        raise HTTPException(400, f"이미지 파일만 가능 (받은 타입: {file.content_type})")
+
+    contents = await file.read()
+    nparr = np.frombuffer(contents, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img is None:
+        raise HTTPException(400, "이미지 디코딩 실패")
+
+    response_data = {
+        "filename": file.filename,
+        "image_size": {"width": img.shape[1], "height": img.shape[0]},
+    }
+
+    # ── 1단계: VLM 분석 (LLaVA가 이미지 직접 해석) ──
+    vlm_analysis = None
+    if vlm_client is not None:
+        try:
+            # YOLOv8 검출 결과를 먼저 구해서 VLM에 컨텍스트로 제공 (선택적)
+            detection_hints = None
+            if models and model_type in models:
+                quick_results = models[model_type].predict(img, conf=conf, verbose=False)
+                quick_result = quick_results[0]
+                if quick_result.boxes is not None and len(quick_result.boxes) > 0:
+                    detection_hints = []
+                    for box in quick_result.boxes:
+                        detection_hints.append({
+                            "class": quick_result.names[int(box.cls)],
+                            "confidence": round(float(box.conf), 4),
+                        })
+
+            # VLM에 이미지 전송 → 자연어 해석
+            vlm_result = await vlm_client.analyze_with_context(
+                image_bytes=contents,
+                detection_results=detection_hints,
+            )
+            vlm_analysis = {
+                "interpretation": vlm_result["analysis"],
+                "model": vlm_result["model"],
+                "duration_ms": vlm_result["total_duration_ms"],
+                "detection_context_provided": detection_hints is not None,
+            }
+        except ConnectionError as e:
+            vlm_analysis = {"error": f"ollama 서버 연결 실패: {str(e)}"}
+        except Exception as e:
+            vlm_analysis = {"error": f"VLM 분석 실패: {str(e)}"}
+    else:
+        vlm_analysis = {
+            "error": "VLM 미초기화 — ollama serve 실행 후 서버 재시작 필요",
+        }
+
+    response_data["vlm_analysis"] = vlm_analysis
+
+    # ── 2단계: YOLOv8 정량 검출 (bbox, mask, confidence) ──
+    detections = []
+    detected_classes = set()
+
+    if models and model_type in models:
+        model = models[model_type]
+        results = model.predict(img, conf=conf, verbose=False)
+        result = results[0]
+
+        if result.boxes is not None:
+            for i, box in enumerate(result.boxes):
+                class_name = result.names[int(box.cls)]
+                detected_classes.add(class_name)
+
+                det = {
+                    "class": class_name,
+                    "confidence": round(float(box.conf), 4),
+                    "bbox": [round(v, 1) for v in box.xyxy[0].tolist()],
+                }
+                if result.masks is not None and i < len(result.masks):
+                    polygon = result.masks[i].xy[0].tolist()
+                    det["polygon_points"] = len(polygon)
+                    det["polygon"] = [[round(x, 1), round(y, 1)] for x, y in polygon]
+
+                detections.append(det)
+
+    response_data["model_type"] = model_type
+    response_data["detections"] = detections
+    response_data["count"] = len(detections)
+
+    # ── 3단계: RAG 문헌 근거 보강 ──
+    # VLM 해석을 기반으로 RAG 질의 (V3과 다른 점: 클래스명이 아닌 VLM 소견 기반)
+    medical_evidence = None
+    if rag_chain is not None:
+        # VLM 분석 결과 또는 검출 결과를 RAG 질의로 변환
+        rag_query = None
+
+        if vlm_analysis and "interpretation" in vlm_analysis:
+            # V4 핵심: VLM 해석을 RAG 질의로 사용
+            vlm_text = vlm_analysis["interpretation"]
+            rag_query = (
+                f"다음 의료 영상 분석 소견에 대한 임상 근거와 "
+                f"권장 조치를 문헌에서 찾아주세요:\n\n{vlm_text[:500]}"
+            )
+        elif detected_classes:
+            # VLM 실패 시 폴백: V3 방식 (검출 클래스 기반)
+            class_names_kr = {
+                "polyp": "위장 폴립",
+                "Impacted": "매복치",
+                "Caries": "충치",
+                "Deep Caries": "깊은 충치",
+                "Periapical Lesion": "치근단 병변",
+            }
+            detected_kr = [class_names_kr.get(c, c) for c in detected_classes]
+            class_text = ", ".join(detected_kr)
+            rag_query = (
+                f"{class_text}이(가) 검출되었습니다. "
+                f"임상적 의미와 권장 추적 관찰 주기를 알려주세요."
+            )
+
+        if rag_query:
+            try:
+                rag_result = await rag_chain.query(rag_query)
+                medical_evidence = {
+                    "query_used": rag_query[:200] + "..." if len(rag_query) > 200 else rag_query,
+                    "query_source": "vlm" if "interpretation" in (vlm_analysis or {}) else "detection",
+                    "answer": rag_result["answer"],
+                    "sources": [
+                        {
+                            "source_file": s["source_file"],
+                            "page": s["page"],
+                            "content_preview": s["content_preview"],
+                        }
+                        for s in rag_result["sources"]
+                    ],
+                    "num_sources": rag_result["num_sources"],
+                }
+            except Exception as e:
+                medical_evidence = {"error": f"RAG 질의 실패: {str(e)}"}
+
+    response_data["medical_evidence"] = medical_evidence
+    response_data["rag_available"] = rag_chain is not None
+    response_data["vlm_available"] = vlm_client is not None
+
+    return response_data
