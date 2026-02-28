@@ -1,0 +1,12 @@
+Title: Underwater Versus Conventional Endoscopic Mucosal Resection for Superficial Non-ampullary Duodenal Epithelial Tumors: A Systematic Review and Meta-Analysis.
+PMID: 36346490
+Journal: Digestive diseases and sciences
+Published: 2023-Apr
+URL: https://pubmed.ncbi.nlm.nih.gov/36346490/
+Authors: Lee JG, Lee SP, Jang HJ, Kae SH
+
+Abstract:
+[BACKGROUND/AIMS] Duodenal underwater endoscopic mucosal resection (UEMR) has been suggested as a feasible treatment option for superficial non-ampullary duodenal epithelial tumors (SNADETs). However, its efficacy and safety have not been fully established yet. Thus, the objective of this systematic review and meta-analysis was to determine the efficacy and safety of UEMR as compared with conventional endoscopic mucosal resection (CEMR) in the treatment of SNADETs.
+[METHODS] We conducted a comprehensive literature search in PubMed, EMBASE, the Cochrane Library. Studies comparing CEMR and UEMR for the resection of SNADET were included. Outcomes included en-bloc and complete resection rates, adverse events, and procedure time.
+[RESULTS] A total of six studies with 2454 lesions were included in the quantitative synthesis. En-bloc and complete resection rates were not significantly different between UEMR and CEMR (OR for en-bloc resection: 0.997 [95% CI 0.439-2.266]; OR for complete resection: 0.960 [95% CI 0.628-1.468]). There was no significant risk difference for perforation (risk difference: - 0.002; 95% CI - 0.009 to 0.005) or delayed bleeding (risk difference: - 0.001; 95% CI - 0.014 to 0.011). Procedure time was significantly shorter in the UEMR (standardized mean difference: - 1.294; 95% CI - 2.461 to - 0.127). The risk of recurrence was not significantly different between UEMR and CEMR (risk difference: 0.001; 95% CI - 0.041 to 0.044).
+[CONCLUSION] Although our results did not show any superiority of UEMR over CEMR in the treatment of SNADETs, UEMR showed equivalent efficacy and safety as compared with CEMR and was associated with a shorter procedure time.

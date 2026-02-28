@@ -1,0 +1,9 @@
+Title: Endoscopic Resection of Gastric Cancer.
+PMID: 34053639
+Journal: Gastrointestinal endoscopy clinics of North America
+Published: 2021-Jul
+URL: https://pubmed.ncbi.nlm.nih.gov/34053639/
+Authors: Kim GH, Jung HY
+
+Abstract:
+With improvements in the early detection of early gastric cancer (EGC) and advances in therapeutic techniques, endoscopic resection (ER) for EGC has become widely adopted in East Asian and Western countries. Endoscopic submucosal dissection has higher rates of en bloc, complete, and curative resections with lower rates of local recurrence than that of endoscopic mucosal resection. ER is a minimally invasive method with low morbidity that provides excellent outcomes. ER for EGC is a safe, effective method, preserving organ function and thus maintaining the patient's quality of life, and is recognized as the first-line treatment of EGC in selected patients.

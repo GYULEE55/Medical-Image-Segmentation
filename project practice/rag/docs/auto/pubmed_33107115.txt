@@ -1,0 +1,9 @@
+Title: Guidelines for endoscopic submucosal dissection and endoscopic mucosal resection for early gastric cancer (second edition).
+PMID: 33107115
+Journal: Digestive endoscopy : official journal of the Japan Gastroenterological Endoscopy Society
+Published: 2021-Jan
+URL: https://pubmed.ncbi.nlm.nih.gov/33107115/
+Authors: Ono H, Yao K, Fujishiro M, Oda I, Uedo N, Nimura S, Yahagi N, Iishi H, Oka M, Ajioka Y, Fujimoto K
+
+Abstract:
+In response to the rapid and wide acceptance and use of endoscopic treatments for early gastric cancer, the Japan Gastroenterological Endoscopy Society, in collaboration with the Japanese Gastric Cancer Association, produced "Guidelines for Endoscopic Submucosal Dissection and Endoscopic Mucosal Resection for Early Gastric Cancer" in 2014, as a set of basic guidelines in accordance with the principles of evidence-based medicine. At the time, a number of statements had to be established by consensus (the lowest evidence level), as evidence levels remained low for many specific areas in this field. However, in recent years, the number of well-designed clinical studies has been increasing. Based on new findings, we have issued the revised second edition of the above guidelines that cover the present state of knowledge. These guidelines are divided into the following seven categories: indications, preoperative diagnosis, techniques, evaluation of curability, complications, long-term postoperative surveillance, and histology.

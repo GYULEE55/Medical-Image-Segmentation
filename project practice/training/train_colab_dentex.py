@@ -39,7 +39,7 @@ prepare_dataset_dentex.py를 실행합니다.
 # # 방법 1: 스크립트 직접 실행 (Drive에 스크립트가 있을 때)
 # %run "/content/drive/MyDrive/Python.Algrithm/project practice/preprocessing/prepare_dataset_dentex.py"
 #
-# # 방법 2: 직접 코드 실행 (스크립트 없을 때)
+# # 방법 2: 직접 코드 실행 (스크립트 없을여깅 때)
 # import sys
 # sys.path.append('/content/drive/MyDrive/Python.Algrithm/project practice/preprocessing')
 # from prepare_dataset_dentex import main

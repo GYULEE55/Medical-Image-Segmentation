@@ -1,0 +1,13 @@
+Title: Recurrence rates after endoscopic resection of large colorectal polyps: A systematic review and meta-analysis.
+PMID: 36157546
+Journal: World journal of gastroenterology
+Published: 2022-Aug-07
+URL: https://pubmed.ncbi.nlm.nih.gov/36157546/
+Authors: Rotermund C, Djinbachian R, Taghiakbari M, Enderle MD, Eickhoff A, von Renteln D
+
+Abstract:
+[BACKGROUND] Complete polyp resection is the main goal of endoscopic removal of large colonic polyps. Resection techniques have evolved in recent years and endoscopic submucosal dissection (ESD), endoscopic mucosal resection (EMR) with margin ablation, cold snare polypectomy (CSP), cold EMR, and underwater EMR have been introduced. Yet, efficacy of these techniques with regard to local recurrence rates (LRRs) vs traditional hot snare polypectomy and standard EMR remains unclear.
+[AIM] To analyze LRR of large colonic polyps in a systematic review and meta-analysis.
+[METHODS] MEDLINE, EMBASE, EBM Reviews, and CINAHL were searched for prospective studies reporting LRR or incomplete resection rate (IRR) after colonic polypectomy of polyps ≥ 10 mm, published between January 2011 and July 2021. Primary outcome was LRR for polyps ≥ 10 mm.
+[RESULTS] Six thousand nine hundred and twenty-eight publications were identified, of which 34 prospective studies were included. LRR for polyps ≥ 10 mm at up to 12 mo' follow-up was 11.0% (95%CI, 7.1%-14.8%; 15 studies; 4904 polyps). ESD (1.7%; 95%CI, 0%-3.4%; 3 studies, 221 polyps) and endoscopic mucosal resection with margin ablation (3.3%; 95%CI, 2.2%-4.5%; 2 studies, 947 polyps) significantly reduced LRR vs standard EMR without (15.2%; 95%CI, 12.5%-18.0%; 4 studies, 650 polyps) or with unsystematic margin ablation (16.5%; 95%CI, 15.2%-17.8%; 6 studies, 3031 polyps).
+[CONCLUSION] LRR is significantly lower after ESD or EMR with routine margin ablation; thus, these techniques should be considered standard for endoscopic removal of large colorectal polyps. Other techniques, such as CSP, cold EMR, and underwater EMR require further evaluation in prospective studies before their routine implementation in clinical practice can be recommended.

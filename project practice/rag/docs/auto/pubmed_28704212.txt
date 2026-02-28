@@ -1,0 +1,11 @@
+Title: Endoscopic mucosal resection and endoscopic submucosal dissection: technique and new directions.
+PMID: 28704212
+Journal: Current opinion in gastroenterology
+Published: 2017-Sep
+URL: https://pubmed.ncbi.nlm.nih.gov/28704212/
+Authors: Nishizawa T, Yahagi N
+
+Abstract:
+[PURPOSE OF REVIEW] Most of small tumours in gastrointestinal tract are easily removed by endoscopic mucosal resection (EMR). However, EMR are sometimes not reliable to ensure the complete resection for large tumours. Although endoscopic submucosal dissection (ESD) was developed, it had a higher risk for complications such as perforation and bleeding. The techniques and clinical outcomes of EMR and ESD are reviewed.
+[RECENT FINDINGS] ESD is more effective for early gastric and oesophageal cancer with higher en-bloc resection rate and lower local recurrence in comparison to EMR. Several studies report favourable long-term outcomes of ESD. ESD has become a standard technique in Japan and other East Asian countries. Piecemeal resection using EMR technique is widely accepted for colorectal large adenomas and results in good clinical outcomes in most patients. However, apparent cancerous lesions need endoscopic en-bloc resection by ESD.
+[SUMMARY] Further development of the technique, devices and training systems will promote worldwide standardization of ESD.

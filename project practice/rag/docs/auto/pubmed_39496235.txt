@@ -1,0 +1,11 @@
+Title: Endoscopic Resection for Colorectal Tumors.
+PMID: 39496235
+Journal: Digestion
+Published: 2025
+URL: https://pubmed.ncbi.nlm.nih.gov/39496235/
+Authors: Hirai Y, Toyoshima N, Saito Y
+
+Abstract:
+[BACKGROUND] Endoscopic resection techniques for colorectal tumors are constantly evolving with improvements.
+[SUMMARY] Over the past decade, there has been a paradigm shift toward cold polypectomy for the removal of small lesions (<10 mm), known as the "cold revolution". In recent years, underwater endoscopic mucosal resection (EMR) has emerged as an alternative to conventional EMR and has been gaining popularity for resection of intermediate and large-sized lesions (≥10 mm). Although colorectal endoscopic submucosal dissection (ESD) requires a high level of advanced skills, improvements in dissection techniques and devices have facilitated the procedure. In Japan, the safety and efficacy of ESD for resecting large lesions (≥20 mm) have been demonstrated in a large-scale, multicenter, prospective cohort study (CREATE-J). ESD is also being increasingly adopted in Western countries. As endoscopic resection continues to advance and include large and more complex defects, a variety of closure techniques and new devices are being developed. Meanwhile, the number of endoscopic resections for T1-colorectal cancer (T1-CRC), including those intended for total excisional biopsy, has been increasing owing to the aging population and improvements in endoscopic technique.
+[KEY MESSAGES] This review provides a broad summary of endoscopic resection for colorectal tumors including advancements in closure techniques and devices for mucosal defects, as well as the potential role of endoscopic resection for patients with T1-CRC.

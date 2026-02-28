@@ -73,7 +73,7 @@ ollama pull llava
 # 다운로드 확인
 ollama list
 ```
-
+알ㅇ
 ### 모델 테스트
 
 ```bash

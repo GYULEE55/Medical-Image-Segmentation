@@ -1,0 +1,9 @@
+Title: Endoscopic Management of Colitis-Associated Neoplasia.
+PMID: 36202521
+Journal: Gastrointestinal endoscopy clinics of North America
+Published: 2022-Oct
+URL: https://pubmed.ncbi.nlm.nih.gov/36202521/
+Authors: Cohen NA, Rubin DT
+
+Abstract:
+This article reviews the latest data concerning the use of advanced therapeutic techniques for endoscopically treating colitis-associated neoplastic lesions and discusses factors associated with improved outcomes.

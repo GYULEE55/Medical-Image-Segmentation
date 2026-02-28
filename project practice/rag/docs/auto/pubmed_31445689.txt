@@ -1,0 +1,9 @@
+Title: Underwater Endoscopic Mucosal Resection.
+PMID: 31445689
+Journal: Gastrointestinal endoscopy clinics of North America
+Published: 2019-Oct
+URL: https://pubmed.ncbi.nlm.nih.gov/31445689/
+Authors: Nett A, Binmoeller K
+
+Abstract:
+Although an established standard, conventional endoscopic mucosal resection (EMR) has disseminated despite an absence of studies demonstrating the value of submucosal injection. Several consequences of poorly executed submucosal injection may increase the difficulty and risk of EMR. Underwater EMR (UEMR), an alternative resection method for colonic neoplasms, avoids the need for submucosal injections. In comparison with reported outcomes of EMR, UEMR achieves similar rates of complete resection with comparable safety, with lower rates of recurrence and fewer repeat procedures. UEMR also compares favorably with endoscopic submucosal dissection in terms of procedure time and rates of complete resection, recurrence, and complications.

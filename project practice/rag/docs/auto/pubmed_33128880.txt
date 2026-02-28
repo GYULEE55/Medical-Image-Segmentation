@@ -1,0 +1,9 @@
+Title: Endoscopic Mucosal Resection and Endoscopic Submucosal Dissection.
+PMID: 33128880
+Journal: The Surgical clinics of North America
+Published: 2020-Dec
+URL: https://pubmed.ncbi.nlm.nih.gov/33128880/
+Authors: Landin MD, Guerrón AD
+
+Abstract:
+Therapeutic endoscopy is an emerging field within general surgery. This article explores the evidence for and usage of endoscopic mucosal resection and endoscopic submucosal dissection throughout the gastrointestinal tract. We aim to educate surgeons and provide an understanding of these techniques. With education and appropriate training, the surgeon will gain confidence and hopefully adopt these tools into their daily practice.

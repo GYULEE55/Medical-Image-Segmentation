@@ -1,0 +1,9 @@
+Title: Advances in Endoscopic Resection.
+PMID: 39489583
+Journal: Gastroenterology clinics of North America
+Published: 2024-Dec
+URL: https://pubmed.ncbi.nlm.nih.gov/39489583/
+Authors: Esaki M, Mohapatra S, Fukami N
+
+Abstract:
+This article provides an overview of recent advances in endoscopic resection techniques. It includes the brief overview of endoscopic submucosal dissection, regional differences in ESD indications, innovation of ESD techniques, and expansion to full-thickness resection. The article covers cold snare polypectomy for small polyps with tips, underwater endoscopic mucosal resection (U-EMR) for sessile lesions with tips and expanding role of U-EMR, and the key assistive techniques for ESD that have improved the safety and efficacy. Furthermore, it discusses the emerging field of endoscopic full-thickness resection including device-assisted and freehand exposure techniques.

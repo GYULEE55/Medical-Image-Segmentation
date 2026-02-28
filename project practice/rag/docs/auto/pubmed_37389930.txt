@@ -1,0 +1,12 @@
+Title: Tip-in Versus Conventional Endoscopic Mucosal Resection for Colorectal Neoplasia: A Systematic Review and Meta-analysis.
+PMID: 37389930
+Journal: Journal of clinical gastroenterology
+Published: 2023 Nov-Dec 01
+URL: https://pubmed.ncbi.nlm.nih.gov/37389930/
+Authors: Niu C, Bapaye J, Zhang J, Zhu K, Liu H, Farooq U, Zahid S, Elkhapery A, Okolo PI
+
+Abstract:
+[BACKGROUND] Early-stage gastrointestinal neoplasms are frequently treated with conventional endoscopic mucosal resection (C-EMR). However, C-EMR frequently leads to incomplete resection of large colorectal lesions. Tip-in endoscopic mucosal resection (EMR), which was recently introduced for en bloc resection of colorectal neoplasms, minimizes slippage during the procedure.
+[METHODS] We conducted a systematic review and meta-analysis of published studies that compared Tip-in EMR with conventional EMR. We searched several electronic databases and included studies that reported on the primary outcomes of en bloc resection rate and complete resection rate, as well as secondary outcomes such as procedure time and procedure-related complications (including perforation and delayed bleeding rate). We used a random effects model to calculate odds ratios (ORs) with 95% CIs for dichotomous data and weighted mean differences with 95% CIs for continuous data. We also conducted several sensitivity analyses to assess the robustness of our findings.
+[RESULTS] A total of 11 studies involving 1244 lesions (684 in the Tip-in EMR group and 560 in C-EMR group) were included in the meta-analysis. Our meta-analysis showed that compared with conventional EMR, Tip-in EMR significantly increased the en bloc resection rate in patients with colorectal neoplasia (OR=3.61; 95% CI, 2.09-6.23; P <0.00001; I2 =0%) and had a higher complete resection rate (OR=2.49; 95% CI, 1.65-3.76; P <0.0001; I2 =0%). However, the procedure time and rates of procedure-related complications did not differ significantly between the 2 groups.
+[CONCLUSIONS] Tip-in EMR outperformed C-EMR for both the en bloc and complete resection of colorectal lesions with similar rates of procedural complications.

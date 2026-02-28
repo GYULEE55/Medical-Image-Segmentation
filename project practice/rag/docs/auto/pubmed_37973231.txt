@@ -1,0 +1,9 @@
+Title: Endoscopic Resection of Early Luminal Cancer.
+PMID: 37973231
+Journal: Gastrointestinal endoscopy clinics of North America
+Published: 2024-Jan
+URL: https://pubmed.ncbi.nlm.nih.gov/37973231/
+Authors: Choi HS, Hwang JH
+
+Abstract:
+Gastrointestinal cancers can have severe consequences if diagnosed at a late stage but can be cured when detected and resected at an early stage. In recent years, the significance of endoscopic screening for gastrointestinal cancers has been established, leading to the identification of early-stage cancers and precancerous lesions. Consequently, endoscopic removal of gastrointestinal tumors has emerged as an effective means of cancer treatment and prevention. This article delves into the indications, techniques, and safety measures associated with endoscopic resection of early-stage luminal cancer within the gastrointestinal tract.

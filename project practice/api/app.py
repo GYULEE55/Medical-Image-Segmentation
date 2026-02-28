@@ -24,9 +24,11 @@ from typing import Dict, List, Optional
 
 # .env 파일에서 환경변수 로드 (OPENAI_API_KEY 등)
 from dotenv import load_dotenv
+
 load_dotenv(Path(__file__).parent.parent / ".env", override=True)
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from ultralytics import YOLO
 
@@ -34,13 +36,42 @@ from ultralytics import YOLO
 # 멀티모델 지원: polyp(위장 폴립) + dental(치과 X-ray)
 MODEL_PATHS: Dict[str, str] = {
     "polyp": os.getenv("MODEL_PATH", str(Path(__file__).parent.parent / "best.pt")),
-    "dental": os.getenv("DENTAL_MODEL_PATH", str(Path(__file__).parent.parent / "best_dentex.pt")),
+    "dental": os.getenv(
+        "DENTAL_MODEL_PATH", str(Path(__file__).parent.parent / "best_dentex.pt")
+    ),
 }
+
+VLM_MAX_EDGE = int(os.getenv("VLM_MAX_EDGE", "960"))
+VLM_JPEG_QUALITY = int(os.getenv("VLM_JPEG_QUALITY", "75"))
+VLM_TIMEOUT_SECONDS = float(os.getenv("VLM_TIMEOUT_SECONDS", "180"))
 
 # ── 전역 상태 ──────────────────────────────────────────────────
 models: Dict[str, YOLO] = {}  # 멀티모델 딕셔너리 {"polyp": YOLO, "dental": YOLO}
-rag_chain = None   # RAG 체인 (V2)
+rag_chain = None  # RAG 체인 (V2)
 vlm_client = None  # VLM 클라이언트 (V4)
+NO_EVIDENCE_TEXT = "제공된 문서에서 해당 정보를 찾을 수 없습니다."
+
+
+def _prepare_vlm_image_bytes(img: np.ndarray, original_bytes: bytes):
+    h, w = img.shape[:2]
+    longest = max(w, h)
+
+    if longest <= VLM_MAX_EDGE:
+        return original_bytes, {"resized": False, "width": w, "height": h}
+
+    scale = VLM_MAX_EDGE / float(longest)
+    new_w = max(1, int(round(w * scale)))
+    new_h = max(1, int(round(h * scale)))
+
+    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    ok, encoded = cv2.imencode(
+        ".jpg", resized, [int(cv2.IMWRITE_JPEG_QUALITY), VLM_JPEG_QUALITY]
+    )
+
+    if not ok:
+        return original_bytes, {"resized": False, "width": w, "height": h}
+
+    return encoded.tobytes(), {"resized": True, "width": new_w, "height": new_h}
 
 
 # ── 앱 초기화 (lifespan 패턴) ──────────────────────────────────
@@ -66,6 +97,7 @@ async def lifespan(app: FastAPI):
     if rag_vectorstore.exists():
         try:
             from rag.chain import MedicalRAGChain
+
             rag_chain = MedicalRAGChain()
             print("[V2] RAG 체인 초기화 완료")
         except Exception as e:
@@ -76,9 +108,12 @@ async def lifespan(app: FastAPI):
     # V4: VLM 클라이언트 초기화 (ollama + LLaVA)
     try:
         from vlm.client import MedicalVLMClient
-        vlm_client = MedicalVLMClient()
+
+        vlm_client = MedicalVLMClient(timeout=VLM_TIMEOUT_SECONDS)
         if await vlm_client.is_available():
-            print(f"[V4] VLM 초기화 완료 (모델: {vlm_client.model})")
+            print(
+                f"[V4] VLM 초기화 완료 (모델: {vlm_client.model}, timeout: {VLM_TIMEOUT_SECONDS}s)"
+            )
         else:
             print(f"[V4] VLM 모델 미설치 또는 ollama 서버 미실행 — VLM 기능 비활성화")
             print(f"     ollama serve → ollama pull {vlm_client.model}")
@@ -113,6 +148,46 @@ app = FastAPI(
     version="4.0.0",
     lifespan=lifespan,
 )
+
+
+@app.get("/demo", include_in_schema=False)
+def demo_page():
+    demo_path = Path(__file__).parent.parent / "ui" / "demo.html"
+    if not demo_path.exists():
+        raise HTTPException(404, "demo 페이지 파일을 찾을 수 없습니다")
+    return FileResponse(demo_path)
+
+
+# ── 샘플 이미지 목록/서빙 ──────────────────────────────────────
+# example_test/ 에 있는 의료 샘플 이미지를 데모에서 바로 써볼 수 있게 제공
+SAMPLE_DIR = Path(__file__).parent.parent / "example_test"
+SAMPLE_REGISTRY = {
+    "colon_polyp": {"file": "colon_polyp.jpg", "model_type": "polyp", "label": "대장 내시경 (폴립)"},
+    "dental_xray": {"file": "dental_xray.png", "model_type": "dental", "label": "치과 파노라마 X-ray"},
+}
+
+
+@app.get("/demo/samples", include_in_schema=False)
+def demo_sample_list():
+    """사용 가능한 샘플 이미지 목록 반환"""
+    return [
+        {"key": k, "label": v["label"], "model_type": v["model_type"]}
+        for k, v in SAMPLE_REGISTRY.items()
+        if (SAMPLE_DIR / v["file"]).exists()
+    ]
+
+
+@app.get("/demo/sample-image", include_in_schema=False)
+def demo_sample_image(key: str = "colon_polyp"):
+    """샘플 이미지 서빙 (key 파라미터로 선택)"""
+    entry = SAMPLE_REGISTRY.get(key)
+    if not entry:
+        raise HTTPException(404, f"알 수 없는 샘플 키: {key}")
+    sample_path = SAMPLE_DIR / entry["file"]
+    if not sample_path.exists():
+        raise HTTPException(404, f"샘플 이미지를 찾을 수 없습니다: {entry['file']}")
+    media = "image/png" if sample_path.suffix == ".png" else "image/jpeg"
+    return FileResponse(sample_path, media_type=media)
 
 
 # ── 요청/응답 스키마 (V2 RAG) ──────────────────────────────────
@@ -158,7 +233,9 @@ def health():
 async def predict(
     file: UploadFile = File(..., description="추론할 이미지 파일"),
     conf: float = 0.25,
-    model_type: str = Form("polyp", description="모델 선택: polyp(위장 폴립) 또는 dental(치과 X-ray)"),
+    model_type: str = Form(
+        "polyp", description="모델 선택: polyp(위장 폴립) 또는 dental(치과 X-ray)"
+    ),
 ):
     """
     이미지 업로드 -> 병변 세그멘테이션 추론
@@ -262,9 +339,8 @@ def rag_health():
     """[V2] RAG 상태 확인"""
     return {
         "rag_ready": rag_chain is not None,
-        "vectorstore_path": str(
-            Path(__file__).parent.parent / "rag" / "vectorstore"
-        ),
+        "rag_llm_provider": getattr(rag_chain, "provider", None),
+        "vectorstore_path": str(Path(__file__).parent.parent / "rag" / "vectorstore"),
         "vectorstore_exists": (
             Path(__file__).parent.parent / "rag" / "vectorstore"
         ).exists(),
@@ -280,7 +356,9 @@ def rag_health():
 async def analyze_with_knowledge(
     file: UploadFile = File(..., description="분석할 의료 이미지"),
     conf: float = 0.25,
-    model_type: str = Form("polyp", description="모델 선택: polyp(위장 폴립) 또는 dental(치과 X-ray)"),
+    model_type: str = Form(
+        "polyp", description="모델 선택: polyp(위장 폴립) 또는 dental(치과 X-ray)"
+    ),
 ):
     """
     [V3] Vision + LLM 통합 분석
@@ -454,26 +532,40 @@ async def vlm_analyze_with_knowledge(
             # YOLOv8 검출 결과를 먼저 구해서 VLM에 컨텍스트로 제공 (선택적)
             detection_hints = None
             if models and model_type in models:
-                quick_results = models[model_type].predict(img, conf=conf, verbose=False)
+                quick_results = models[model_type].predict(
+                    img, conf=conf, verbose=False
+                )
                 quick_result = quick_results[0]
                 if quick_result.boxes is not None and len(quick_result.boxes) > 0:
                     detection_hints = []
                     for box in quick_result.boxes:
-                        detection_hints.append({
-                            "class": quick_result.names[int(box.cls)],
-                            "confidence": round(float(box.conf), 4),
-                        })
+                        detection_hints.append(
+                            {
+                                "class": quick_result.names[int(box.cls)],
+                                "confidence": round(float(box.conf), 4),
+                            }
+                        )
+
+            vlm_image_bytes, vlm_image_meta = _prepare_vlm_image_bytes(img, contents)
 
             # VLM에 이미지 전송 → 자연어 해석
             vlm_result = await vlm_client.analyze_with_context(
-                image_bytes=contents,
+                image_bytes=vlm_image_bytes,
                 detection_results=detection_hints,
+                model_type=model_type,
             )
             vlm_analysis = {
                 "interpretation": vlm_result["analysis"],
                 "model": vlm_result["model"],
                 "duration_ms": vlm_result["total_duration_ms"],
                 "detection_context_provided": detection_hints is not None,
+                "input_resize": {
+                    "applied": vlm_image_meta["resized"],
+                    "width": vlm_image_meta["width"],
+                    "height": vlm_image_meta["height"],
+                    "max_edge": VLM_MAX_EDGE,
+                    "jpeg_quality": VLM_JPEG_QUALITY,
+                },
             }
         except ConnectionError as e:
             vlm_analysis = {"error": f"ollama 서버 연결 실패: {str(e)}"}
@@ -526,9 +618,19 @@ async def vlm_analyze_with_knowledge(
         if vlm_analysis and "interpretation" in vlm_analysis:
             # V4 핵심: VLM 해석을 RAG 질의로 사용
             vlm_text = vlm_analysis["interpretation"]
+            class_names_kr = {
+                "polyp": "위장 폴립",
+                "Impacted": "매복치",
+                "Caries": "충치",
+                "Deep Caries": "깊은 충치",
+                "Periapical Lesion": "치근단 병변",
+            }
+            detected_kr = [class_names_kr.get(c, c) for c in detected_classes]
+            keyword_hint = ", ".join(detected_kr) if detected_kr else "검출 클래스 없음"
             rag_query = (
                 f"다음 의료 영상 분석 소견에 대한 임상 근거와 "
-                f"권장 조치를 문헌에서 찾아주세요:\n\n{vlm_text[:500]}"
+                f"권장 조치를 문헌에서 찾아주세요. "
+                f"핵심 키워드: {keyword_hint}\n\n{vlm_text[:500]}"
             )
         elif detected_classes:
             # VLM 실패 시 폴백: V3 방식 (검출 클래스 기반)
@@ -549,10 +651,19 @@ async def vlm_analyze_with_knowledge(
         if rag_query:
             try:
                 rag_result = await rag_chain.query(rag_query)
+                has_evidence = rag_result.get("num_sources", 0) > 0
+                answer_text = rag_result.get("answer", NO_EVIDENCE_TEXT)
+                if not has_evidence:
+                    answer_text = NO_EVIDENCE_TEXT
+
                 medical_evidence = {
-                    "query_used": rag_query[:200] + "..." if len(rag_query) > 200 else rag_query,
-                    "query_source": "vlm" if "interpretation" in (vlm_analysis or {}) else "detection",
-                    "answer": rag_result["answer"],
+                    "query_used": rag_query[:200] + "..."
+                    if len(rag_query) > 200
+                    else rag_query,
+                    "query_source": "vlm"
+                    if "interpretation" in (vlm_analysis or {})
+                    else "detection",
+                    "answer": answer_text,
                     "sources": [
                         {
                             "source_file": s["source_file"],
@@ -562,9 +673,17 @@ async def vlm_analyze_with_knowledge(
                         for s in rag_result["sources"]
                     ],
                     "num_sources": rag_result["num_sources"],
+                    "grounded": has_evidence,
+                    "reason": None if has_evidence else "no_evidence",
                 }
             except Exception as e:
-                medical_evidence = {"error": f"RAG 질의 실패: {str(e)}"}
+                error_text = str(e)
+                if "insufficient_quota" in error_text:
+                    medical_evidence = {
+                        "error": "RAG 질의 실패: OpenAI 크레딧/요금제 한도를 초과했습니다 (insufficient_quota)."
+                    }
+                else:
+                    medical_evidence = {"error": f"RAG 질의 실패: {error_text}"}
 
     response_data["medical_evidence"] = medical_evidence
     response_data["rag_available"] = rag_chain is not None

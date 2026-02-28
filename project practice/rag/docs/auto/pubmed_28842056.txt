@@ -1,0 +1,9 @@
+Title: Colorectal endoscopic mucosal resection (EMR).
+PMID: 28842056
+Journal: Best practice & research. Clinical gastroenterology
+Published: 2017-Aug
+URL: https://pubmed.ncbi.nlm.nih.gov/28842056/
+Authors: Kandel P, Wallace MB
+
+Abstract:
+Colonoscopy has the benefit of detecting and treating precancerous adenomatous polyps and thus reduces mortality associated with CRC. Screening colonoscopy is the keystone for prevention of colorectal cancer. Over the last 20 years there has been increased in the management of large colorectal polyps from surgery to endoscopic removal techniques which is less invasive. Traditionally surgical resection was the treatment of choice for many years for larger polyps but colectomy poses significant morbidity of 14-46% and mortality of up to 7%. There are several advantages of endoscopic resection technique over surgery; it is less invasive, less expensive, has rapid recovery, and preserves the normal gut functions. In addition patient satisfaction and efficacy of EMR is higher with minor complications. Thus, this has facilitated the development of advanced resection technique for the treatment of large colorectal polyps called as endoscopic mucosal resection (EMR).

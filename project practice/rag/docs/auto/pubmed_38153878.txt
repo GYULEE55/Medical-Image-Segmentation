@@ -1,0 +1,12 @@
+Title: Colorectal cancer screening guidelines for average-risk and high-risk individuals: A systematic review.
+PMID: 38153878
+Journal: Romanian journal of internal medicine = Revue roumaine de medecine interne
+Published: 2024-Jun-01
+URL: https://pubmed.ncbi.nlm.nih.gov/38153878/
+Authors: Tanadi C, Tandarto K, Stella MM, Sutanto KW, Steffanus M, Tenggara R, Bestari MB
+
+Abstract:
+[AIMS] This review aims to summarize the different colorectal cancer guidelines for average-risk and high-risk individuals from various countries.
+[METHODS] A comprehensive literature search regarding guidelines, consensus recommendations, or position statements about colorectal cancer screening published within the last 10 years (1st January 2012 to 27th August 2022), was performed at EBSCOhost, JSTOR, PubMed, ProQuest, SAGE, and ScienceDirect.
+[RESULTS] A total of 18 guidelines were included in this review. Most guidelines recommended screening between 45 and 75 years for average-risk individuals. Recommendations regarding colorectal cancer screening in high-risk individuals were more varied and depended on the risk factor. For high-risk individuals with a positive family history of colorectal cancer or advanced colorectal polyp, screening should begin at age 40. Some frequently suggested screening modalities in order of frequency are colonoscopy, FIT, and CTC. Furthermore, several screening intervals were suggested, including colonoscopy every 10 years for average-risk and every 5-10 years for high-risk individuals, FIT annually in average-risk and every 1-2 years in high-risk individuals, and CTC every five years for all individuals.
+[CONCLUSION] All individuals with average-risk should undergo colorectal cancer screening between 45 and 75. Meanwhile, individuals with higher risks, such as those with a positive family history, should begin screening at age 40. Several recommended screening modalities were suggested, including colonoscopy every 10 years in average-risk and every 5-10 years in high-risk, FIT annually in average-risk and every 1-2 years in high-risk, and CTC every five years.

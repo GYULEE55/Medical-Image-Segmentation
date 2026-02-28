@@ -1,0 +1,9 @@
+Title: Endoscopic Resection in the Esophagus.
+PMID: 30268294
+Journal: Thoracic surgery clinics
+Published: 2018-Nov
+URL: https://pubmed.ncbi.nlm.nih.gov/30268294/
+Authors: Feczko AF, Louie BE
+
+Abstract:
+The article is a review of the principles behind endoscopic resection of esophageal dysplasia and early cancers. The techniques of endoscopic mucosal resection and endoscopic submucosal dissection are reviewed, and the supporting literature compared. Endoscopic resection is compared with esophagectomy for the management of these lesions and current areas of controversy with regard to T1b lesions and gastroesophageal reflux following resection are addressed.

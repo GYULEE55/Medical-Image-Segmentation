@@ -1,0 +1,9 @@
+Title: [Endoscopic full-thickness resection].
+PMID: 27286839
+Journal: Der Internist
+Published: 2016-Aug
+URL: https://pubmed.ncbi.nlm.nih.gov/27286839/
+Authors: Meier B, Schmidt A, Caca K
+
+Abstract:
+Conventional endoscopic resection techniques such as endoscopic mucosal resection (EMR) or endoscopic submucosal dissection (ESD) are powerful tools for the treatment of gastrointestinal (GI) neoplasms. However, those techniques are limited to the superficial layers of the GI wall (mucosa and submucosa). Lesions without lifting sign (usually arising from deeper layers) or lesions in difficult anatomic positions (appendix, diverticulum) are difficult - if not impossible - to resect using conventional techniques, due to the increased risk of complications. For larger lesions (>2 cm), ESD appears to be superior to the conventional techniques because of the en bloc resection, but the procedure is technically challenging, time consuming, and associated with complications even in experienced hands. Since the development of the over-the-scope clips (OTSC), complications like bleeding or perforation can be endoscopically better managed. In recent years, different endoscopic full-thickness resection techniques came to the focus of interventional endoscopy. Since September 2014, the full-thickness resection device (FTRD) has the CE marking in Europe for full-thickness resection in the lower GI tract. Technically the device is based on the OTSC system and combines OTSC application and snare polypectomy in one step. This study shows all full-thickness resection techniques currently available, but clearly focuses on the experience with the FTRD in the lower GI tract.

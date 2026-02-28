@@ -1,0 +1,1111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Medical AI Assistant Demo</title>
+  <style>
+    :root {
+      --bg-a: #eef6ff;
+      --bg-b: #e6fbf6;
+      --ink: #182033;
+      --muted: #5e6880;
+      --card: rgba(255, 255, 255, 0.88);
+      --line: rgba(24, 32, 51, 0.12);
+      --primary: #0e7f67;
+      --primary-2: #26b68f;
+      --primary-soft: rgba(14, 127, 103, 0.12);
+      --danger: #b12a3a;
+      --warn: #a06a10;
+      --ok: #1c7f3c;
+      --mono: "SFMono-Regular", Menlo, Consolas, Monaco, "Liberation Mono", "Courier New", monospace;
+      --sans: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--ink);
+      min-height: 100vh;
+      background:
+        radial-gradient(1200px 900px at 90% -20%, #cdf2ea 0%, transparent 60%),
+        radial-gradient(1000px 800px at -10% 10%, #d9e6ff 0%, transparent 55%),
+        linear-gradient(160deg, var(--bg-a), var(--bg-b));
+    }
+
+    .wrap {
+      width: min(1240px, calc(100% - 36px));
+      margin: 22px auto 34px;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 24px;
+      background: var(--card);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 16px 40px rgba(13, 24, 48, 0.09);
+      animation: in 420ms ease-out;
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(1.6rem, 2.5vw, 2.5rem);
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .guide-box {
+      margin-top: 14px;
+      border: 1px solid rgba(14, 127, 103, 0.22);
+      background: linear-gradient(120deg, #f3fffb, #f8fffd);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .guide-title {
+      margin: 0;
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #125e4d;
+    }
+
+    .guide-text {
+      margin: 6px 0 0;
+      color: #34546d;
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #34415c;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 370px 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      background: var(--card);
+      box-shadow: 0 8px 20px rgba(12, 25, 50, 0.07);
+      animation: in 460ms ease-out;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 1.08rem;
+      letter-spacing: -0.01em;
+    }
+
+    .hint {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.4;
+    }
+
+    label {
+      display: block;
+      margin: 12px 0 6px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    input[type="file"],
+    select,
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 10px 12px;
+      font: inherit;
+      background: #fff;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    select:focus,
+    input:focus {
+      outline: none;
+      border-color: #62b6ff;
+      box-shadow: 0 0 0 3px rgba(98, 182, 255, 0.2);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:disabled { cursor: not-allowed; opacity: 0.7; }
+
+    .primary {
+      color: #fff;
+      background: linear-gradient(120deg, var(--primary), var(--primary-2));
+      box-shadow: 0 8px 18px rgba(15, 130, 102, 0.35);
+    }
+
+    .secondary {
+      color: var(--ink);
+      background: #edf1f9;
+      border: 1px solid var(--line);
+    }
+
+    .status-wrap {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 10px;
+    }
+
+    .status-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+      min-height: 24px;
+    }
+
+    .status {
+      font-size: 0.92rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--danger); }
+    .status.warn { color: var(--warn); }
+
+    .timer {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      background: #f4f7ff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 8px;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid rgba(14, 127, 103, 0.2);
+      border-top-color: var(--primary);
+      animation: spin 0.8s linear infinite;
+      display: none;
+      margin-right: 8px;
+    }
+
+    .status-line {
+      display: flex;
+      align-items: center;
+      min-height: 20px;
+    }
+
+    .status-line.busy .spinner { display: inline-block; }
+
+    .foot {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .pane {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+      min-height: 360px;
+    }
+
+    .json-pane {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pane-head {
+      background: #f4f7fd;
+      border-bottom: 1px solid var(--line);
+      padding: 9px 12px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      background: #fafcff;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+    }
+
+    .metric .k {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .metric .v {
+      margin-top: 4px;
+      font-size: 0.95rem;
+      font-weight: 800;
+    }
+
+    .insight-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fbff;
+    }
+
+    .badge-set {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 0.73rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #33415e;
+    }
+
+    .badge.ok {
+      background: #e9f9ef;
+      color: #1f7a3f;
+      border-color: rgba(31, 122, 63, 0.25);
+    }
+
+    .badge.warn {
+      background: #fff7e6;
+      color: #9a640c;
+      border-color: rgba(154, 100, 12, 0.25);
+    }
+
+    .badge.error {
+      background: #fdeced;
+      color: #b12a3a;
+      border-color: rgba(177, 42, 58, 0.25);
+    }
+
+    .copy-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #2a3955;
+      border-radius: 8px;
+      padding: 6px 9px;
+      font-size: 0.74rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .toggle-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #2a3955;
+      border-radius: 8px;
+      padding: 6px 9px;
+      font-size: 0.74rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .toggle-btn:hover {
+      background: #f1f5ff;
+    }
+
+    .copy-btn:hover {
+      background: #f1f5ff;
+    }
+
+    .media {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      background: #f5f7fb;
+      min-height: 300px;
+    }
+
+    .media.hidden { display: none; }
+
+    .media-placeholder {
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      background: #f5f7fb;
+      font-size: 0.95rem;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .media-placeholder.hidden { display: none; }
+
+    pre {
+      margin: 0;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.48;
+      overflow: auto;
+      max-height: 560px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #output {
+      background: #0f1728;
+      color: #dde8ff;
+    }
+
+    #output.hidden {
+      display: none;
+    }
+
+    .insights {
+      border-top: 1px solid var(--line);
+      padding: 10px;
+      background: #fcfdff;
+      display: grid;
+      gap: 8px;
+    }
+
+    .insight-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 10px;
+    }
+
+    .insight-card.warn-card {
+      border-color: rgba(154, 100, 12, 0.35);
+      background: #fff8e8;
+    }
+
+    .insight-title {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--muted);
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .role-text {
+      margin: -2px 0 8px;
+      font-size: 0.77rem;
+      color: #61708c;
+    }
+
+    .insight-body {
+      font-size: 0.9rem;
+      line-height: 1.45;
+      color: #22314f;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .insight-body.warn {
+      color: #8b5b0b;
+    }
+
+    .insight-body.error {
+      color: #9d2533;
+    }
+
+    .det-list {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 0.88rem;
+      color: #23314f;
+      line-height: 1.45;
+    }
+
+    .more-btn {
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      background: #f8fbff;
+      color: #2a3d5f;
+      border-radius: 7px;
+      padding: 4px 8px;
+      font-size: 0.74rem;
+      font-weight: 800;
+    }
+
+    .source-list {
+      margin: 0;
+      padding-left: 16px;
+      font-size: 0.84rem;
+      color: #2b3d5c;
+      line-height: 1.45;
+      white-space: normal;
+    }
+
+    @keyframes in {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .result-grid { grid-template-columns: 1fr; }
+      .summary { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1 class="title">Medical AI Assistant Demo</h1>
+      <p class="subtitle">의료진의 1차 판독 부담을 줄이기 위한 PoC: 이미지 1장으로 <strong>검출 → 해석 → 문헌 근거</strong>를 한 번에 확인합니다.</p>
+      <div class="chips">
+        <span class="chip">FastAPI + YOLOv8</span>
+        <span class="chip">VLM (Ollama)</span>
+        <span class="chip">RAG Evidence</span>
+      </div>
+      <div class="guide-box">
+        <p class="guide-title">처음 보는 분을 위한 10초 가이드</p>
+        <p class="guide-text">1) 샘플 선택/업로드 → 2) 병변 검출 결과 확인 → 3) 쉬운 한국어 해석 확인 → 4) 문헌 근거 확인. 근거가 부족하면 자동으로 제한해 오해 가능성을 낮춥니다.</p>
+      </div>
+    </section>
+
+    <section class="layout">
+      <aside class="card">
+        <h2>Inference Controls</h2>
+        <p class="hint">실무 데모 권장: <code>/vlm-analyze</code> 기준으로 "근거 있음/부족" 배지와 출처 카드까지 함께 보여주세요 (보통 40~120초).</p>
+
+        <label for="endpoint">Endpoint</label>
+        <select id="endpoint">
+          <option value="/predict">POST /predict</option>
+          <option value="/analyze">POST /analyze</option>
+          <option value="/vlm-analyze" selected>POST /vlm-analyze</option>
+        </select>
+
+        <label for="model_type">Model Type</label>
+        <select id="model_type">
+          <option value="polyp" selected>polyp</option>
+          <option value="dental">dental</option>
+        </select>
+
+        <label for="conf">Confidence</label>
+        <input id="conf" type="number" step="0.01" min="0" max="1" value="0.25">
+
+        <label for="file">Image File</label>
+        <input id="file" type="file" accept="image/*">
+
+        <label for="sampleKey">Demo Sample</label>
+        <select id="sampleKey">
+          <option value="colon_polyp" selected>대장 내시경 (폴립)</option>
+          <option value="dental_xray">치과 파노라마 X-ray</option>
+        </select>
+        <p class="hint" id="sampleInfo">샘플 선택 후 "샘플로 테스트하기"를 누르면 모델 타입이 자동 매칭되어 시연이 안정적으로 진행됩니다.</p>
+
+        <div class="btn-row">
+          <button class="primary" id="runBtn">Run Analysis</button>
+          <button class="secondary" id="sampleBtn">샘플로 테스트하기</button>
+          <button class="secondary" id="clearBtn">Clear</button>
+        </div>
+
+        <div class="status-wrap">
+          <div class="status-head">
+            <div class="status-line" id="statusLine"><span class="spinner" id="spinner"></span><span id="status" class="status">준비 완료</span></div>
+            <span id="timer" class="timer">00:00</span>
+          </div>
+          <div class="hint" id="phaseHint">대기 중</div>
+        </div>
+
+        <p class="foot">면접 시에는 "왜 이 결과를 신뢰할 수 있는지"를 함께 설명하세요: 검출 수치, VLM 해석, RAG 출처를 한 화면에서 제시합니다.</p>
+      </aside>
+
+      <section class="result-grid">
+        <article class="pane">
+          <div class="pane-head">Uploaded Image</div>
+          <div id="previewPlaceholder" class="media-placeholder">아직 선택된 이미지가 없습니다.</div>
+          <img id="preview" class="media" alt="uploaded preview">
+        </article>
+
+        <article class="pane json-pane">
+          <div class="pane-head">API Response JSON</div>
+          <div class="summary" id="summary">
+            <div class="metric"><div class="k">HTTP</div><div class="v" id="mHttp">-</div></div>
+            <div class="metric"><div class="k">Detections</div><div class="v" id="mDet">-</div></div>
+            <div class="metric"><div class="k">VLM</div><div class="v" id="mVlm">-</div></div>
+          </div>
+          <div class="insight-row">
+            <div class="badge-set" id="badges">
+              <span class="badge">대기</span>
+            </div>
+            <span class="badge">Summary View</span>
+          </div>
+          <pre id="output" class="hidden">{
+  "message": "아직 요청 전입니다."
+}</pre>
+          <div class="insights">
+            <div class="insight-card">
+              <div class="insight-title">Result Summary</div>
+              <div class="role-text">역할: 전체 결과를 한 줄로 요약합니다.</div>
+              <div class="insight-body" id="insightSummary">요청 후 결과 요약이 표시됩니다.</div>
+            </div>
+            <div class="insight-card">
+              <div class="insight-title">VLM Interpretation</div>
+              <div class="role-text">역할: 이미지에서 보이는 내용을 쉬운 말로 설명합니다.</div>
+              <div class="insight-body" id="insightVlm">-</div>
+              <button id="vlmMoreBtn" class="more-btn" style="display:none;">더보기</button>
+            </div>
+            <div class="insight-card">
+              <div class="insight-title">Detections</div>
+              <div class="role-text">역할: 검출된 병변 위치/신뢰도를 정량으로 보여줍니다.</div>
+              <div class="insight-body" id="insightDetections">-</div>
+            </div>
+            <div class="insight-card" id="ragCard">
+              <div class="insight-title">RAG / Error</div>
+              <div class="role-text">역할: 문헌에서 근거를 찾아 설명합니다.</div>
+              <div class="insight-body" id="insightRag">-</div>
+            </div>
+            <div class="insight-card warn-card" id="noEvidenceCard" style="display:none;">
+              <div class="insight-title">근거 부족 안내</div>
+              <div class="insight-body warn">현재 문서 근거가 부족해 RAG 답변을 제한했습니다. 문서를 더 추가하면 답변 품질이 좋아집니다.</div>
+            </div>
+            <div class="insight-card">
+              <div class="insight-title">RAG Sources</div>
+              <div class="role-text">역할: 어떤 문헌을 근거로 썼는지 출처를 보여줍니다.</div>
+              <div class="insight-body" id="insightSources">-</div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const endpointEl = document.getElementById("endpoint");
+    const modelTypeEl = document.getElementById("model_type");
+    const confEl = document.getElementById("conf");
+    const fileEl = document.getElementById("file");
+    const sampleKeyEl = document.getElementById("sampleKey");
+    const sampleInfoEl = document.getElementById("sampleInfo");
+    const runBtn = document.getElementById("runBtn");
+    const sampleBtn = document.getElementById("sampleBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const statusEl = document.getElementById("status");
+    const phaseHintEl = document.getElementById("phaseHint");
+    const timerEl = document.getElementById("timer");
+    const statusLineEl = document.getElementById("statusLine");
+    const previewEl = document.getElementById("preview");
+    const previewPlaceholderEl = document.getElementById("previewPlaceholder");
+    const outputEl = document.getElementById("output");
+    const badgesEl = document.getElementById("badges");
+    const mHttpEl = document.getElementById("mHttp");
+    const mDetEl = document.getElementById("mDet");
+    const mVlmEl = document.getElementById("mVlm");
+    const insightSummaryEl = document.getElementById("insightSummary");
+    const insightVlmEl = document.getElementById("insightVlm");
+    const vlmMoreBtn = document.getElementById("vlmMoreBtn");
+    const insightDetectionsEl = document.getElementById("insightDetections");
+    const insightRagEl = document.getElementById("insightRag");
+    const noEvidenceCardEl = document.getElementById("noEvidenceCard");
+    const insightSourcesEl = document.getElementById("insightSources");
+
+    let timerHandle = null;
+    let startedAt = null;
+    const sampleMetaByKey = {
+      colon_polyp: { label: "대장 내시경 (폴립)", model_type: "polyp" },
+      dental_xray: { label: "치과 파노라마 X-ray", model_type: "dental" },
+    };
+
+    async function loadSampleOptions() {
+      try {
+        const res = await fetch("/demo/samples");
+        if (!res.ok) return;
+        const rows = await res.json();
+        if (!Array.isArray(rows) || rows.length === 0) return;
+
+        sampleKeyEl.innerHTML = "";
+        rows.forEach((row, idx) => {
+          if (!row?.key) return;
+          sampleMetaByKey[row.key] = {
+            label: row.label || row.key,
+            model_type: row.model_type || "polyp",
+          };
+          const option = document.createElement("option");
+          option.value = row.key;
+          option.textContent = row.label || row.key;
+          if (idx === 0) option.selected = true;
+          sampleKeyEl.appendChild(option);
+        });
+      } catch {
+        // 샘플 목록 API 실패 시 기본 옵션을 그대로 사용
+      }
+      syncSampleHint();
+    }
+
+    function syncSampleHint() {
+      const key = sampleKeyEl.value || "colon_polyp";
+      const meta = sampleMetaByKey[key] || sampleMetaByKey.colon_polyp;
+      sampleInfoEl.textContent = `${meta.label} 샘플이 선택됨 · 권장 model_type=${meta.model_type}`;
+    }
+
+    function fmtSec(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const min = String(Math.floor(totalSec / 60)).padStart(2, "0");
+      const sec = String(totalSec % 60).padStart(2, "0");
+      return `${min}:${sec}`;
+    }
+
+    function setStatus(message, tone = "normal") {
+      statusEl.textContent = message;
+      statusEl.classList.remove("ok", "error", "warn");
+      if (tone === "ok") statusEl.classList.add("ok");
+      if (tone === "error") statusEl.classList.add("error");
+      if (tone === "warn") statusEl.classList.add("warn");
+    }
+
+    function setSummary(http = "-", det = "-", vlm = "-") {
+      mHttpEl.textContent = http;
+      mDetEl.textContent = det;
+      mVlmEl.textContent = vlm;
+    }
+
+    function setBadges(items) {
+      badgesEl.innerHTML = "";
+      if (!items || items.length === 0) {
+        badgesEl.innerHTML = "<span class=\"badge\">대기</span>";
+        return;
+      }
+      items.forEach((item) => {
+        const b = document.createElement("span");
+        b.className = `badge ${item.tone || ""}`.trim();
+        b.textContent = item.label;
+        badgesEl.appendChild(b);
+      });
+    }
+
+    function setInsight(el, text, tone = "") {
+      el.textContent = text;
+      el.classList.remove("warn", "error");
+      if (tone) {
+        el.classList.add(tone);
+      }
+    }
+
+    function confidenceLabel(conf) {
+      if (typeof conf !== "number") return "-";
+      if (conf >= 0.7) return "높음";
+      if (conf >= 0.4) return "보통";
+      return "낮음";
+    }
+
+    function fileNameOnly(pathText) {
+      const t = String(pathText || "").trim();
+      if (!t) return "unknown";
+      const parts = t.split(/[\\/]/);
+      return parts[parts.length - 1] || "unknown";
+    }
+
+    function formatPageValue(page) {
+      if (page === null || page === undefined || page === "" || page === "N/A") return "p.-";
+      const n = Number(page);
+      if (Number.isFinite(n)) return `p.${n + 1}`;
+      return `p.${String(page)}`;
+    }
+
+    function renderSources(payload) {
+      const key = payload?.medical_evidence ? "medical_evidence" : "medical_knowledge";
+      const src = Array.isArray(payload?.[key]?.sources) ? payload[key].sources : [];
+      if (src.length === 0) {
+        setInsight(insightSourcesEl, "출처 없음");
+        return;
+      }
+      const lines = src.slice(0, 5).map((s) => {
+        const file = fileNameOnly(s?.source_file);
+        const page = formatPageValue(s?.page);
+        return `- ${file} (${page})`;
+      });
+      setInsight(insightSourcesEl, lines.join("\n"));
+    }
+
+    function applyCollapsibleText(el, btnEl, fullText, limit = 200) {
+      const text = String(fullText || "-").trim() || "-";
+      if (text.length <= limit) {
+        el.textContent = text;
+        btnEl.style.display = "none";
+        btnEl.onclick = null;
+        return;
+      }
+
+      const shortText = text.slice(0, limit) + "...";
+      let expanded = false;
+      el.textContent = shortText;
+      btnEl.textContent = "더보기";
+      btnEl.style.display = "inline-block";
+      btnEl.onclick = () => {
+        expanded = !expanded;
+        el.textContent = expanded ? text : shortText;
+        btnEl.textContent = expanded ? "접기" : "더보기";
+      };
+    }
+
+    function renderDetections(payload) {
+      const detections = Array.isArray(payload?.detections) ? payload.detections : [];
+      if (detections.length === 0) {
+        setInsight(insightDetectionsEl, "검출 없음");
+        return;
+      }
+
+      const rows = detections
+        .slice(0, 5)
+        .map((d) => {
+          const cls = d?.class ?? "unknown";
+          const conf = typeof d?.confidence === "number" ? d.confidence.toFixed(2) : "-";
+          const confKo = confidenceLabel(d?.confidence);
+          return `- ${cls} (conf: ${conf}, 신뢰도: ${confKo})`;
+        });
+      setInsight(insightDetectionsEl, rows.join("\n"));
+    }
+
+    function renderInsights(response, payload) {
+      const isOk = response?.ok;
+      const modelType = payload?.model_type ?? "-";
+      const count = typeof payload?.count === "number" ? payload.count : "-";
+      const ragGrounded = payload?.medical_evidence?.grounded === true || Number(payload?.medical_evidence?.num_sources || 0) > 0;
+      let summary = `모델: ${modelType}, 검출: ${count}`;
+
+      if (isOk && modelType === "polyp" && count === 0) {
+        summary += "\n치과 X-ray라면 model_type=dental 사용 권장";
+      }
+
+      setInsight(insightSummaryEl, summary, isOk ? "" : "error");
+      noEvidenceCardEl.style.display = "none";
+
+      if (!ragGrounded && payload?.medical_evidence?.reason === "no_evidence") {
+        setInsight(insightVlmEl, "문헌 근거가 부족해 VLM 해석 문장은 숨겼습니다. (오해 방지)", "warn");
+        vlmMoreBtn.style.display = "none";
+      } else if (payload?.vlm_analysis?.interpretation) {
+        applyCollapsibleText(insightVlmEl, vlmMoreBtn, payload.vlm_analysis.interpretation, 200);
+      } else if (payload?.vlm_analysis?.error) {
+        setInsight(insightVlmEl, payload.vlm_analysis.error, "warn");
+        vlmMoreBtn.style.display = "none";
+      } else {
+        setInsight(insightVlmEl, "VLM 결과 없음", "warn");
+        vlmMoreBtn.style.display = "none";
+      }
+
+      renderDetections(payload);
+
+      if (payload?.medical_evidence?.reason === "no_evidence") {
+        setInsight(insightRagEl, "제공된 문서에서 해당 정보를 찾을 수 없습니다.", "warn");
+        noEvidenceCardEl.style.display = "block";
+      } else if (payload?.medical_evidence?.answer) {
+        const answer = String(payload.medical_evidence.answer);
+        setInsight(insightRagEl, answer.slice(0, 280) + (answer.length > 280 ? "..." : ""));
+      } else if (payload?.medical_evidence?.error) {
+        setInsight(insightRagEl, payload.medical_evidence.error, "warn");
+      } else if (payload?.medical_knowledge?.answer) {
+        const answer = String(payload.medical_knowledge.answer);
+        setInsight(insightRagEl, answer.slice(0, 280) + (answer.length > 280 ? "..." : ""));
+      } else if (payload?.medical_knowledge?.error) {
+        setInsight(insightRagEl, payload.medical_knowledge.error, "warn");
+      } else {
+        setInsight(insightRagEl, "RAG 결과 없음");
+      }
+
+      renderSources(payload);
+    }
+
+    function stopProgress() {
+      if (timerHandle) {
+        clearInterval(timerHandle);
+        timerHandle = null;
+      }
+      statusLineEl.classList.remove("busy");
+    }
+
+    function startProgress(endpoint) {
+      stopProgress();
+      startedAt = Date.now();
+      statusLineEl.classList.add("busy");
+      setStatus("분석 요청 전송 완료", "warn");
+      phaseHintEl.textContent = "서버에서 이미지 파싱 및 모델 추론을 시작합니다.";
+      timerEl.textContent = "00:00";
+
+      timerHandle = setInterval(() => {
+        const elapsed = Date.now() - startedAt;
+        timerEl.textContent = fmtSec(elapsed);
+
+        if (endpoint === "/vlm-analyze") {
+          if (elapsed < 15000) {
+            phaseHintEl.textContent = "VLM/YOLO 파이프라인 초기화 중...";
+          } else if (elapsed < 50000) {
+            phaseHintEl.textContent = "VLM 이미지 해석 진행 중 (정상).";
+          } else {
+            phaseHintEl.textContent = "RAG 근거 결합 또는 최종 응답 직렬화 중...";
+          }
+        } else if (endpoint === "/analyze") {
+          phaseHintEl.textContent = "YOLO 검출 + RAG 결합 분석 중...";
+        } else {
+          phaseHintEl.textContent = "YOLO 검출 결과 생성 중...";
+        }
+      }, 1000);
+    }
+
+    function setPreview(file) {
+      if (!file) {
+        previewEl.removeAttribute("src");
+        previewEl.classList.add("hidden");
+        previewPlaceholderEl.classList.remove("hidden");
+        return;
+      }
+      previewEl.src = URL.createObjectURL(file);
+      previewEl.classList.remove("hidden");
+      previewPlaceholderEl.classList.add("hidden");
+    }
+
+    function resetView() {
+      setPreview(null);
+      outputEl.textContent = JSON.stringify({ message: "초기화 완료" }, null, 2);
+      outputEl.classList.add("hidden");
+      setSummary("-", "-", "-");
+      setBadges([{ label: "대기" }]);
+      setInsight(insightSummaryEl, "요청 후 결과 요약이 표시됩니다.");
+      setInsight(insightVlmEl, "-");
+      setInsight(insightDetectionsEl, "-");
+      setInsight(insightRagEl, "-");
+      setInsight(insightSourcesEl, "-");
+      noEvidenceCardEl.style.display = "none";
+      vlmMoreBtn.style.display = "none";
+      setStatus("준비 완료");
+      phaseHintEl.textContent = "대기 중";
+      timerEl.textContent = "00:00";
+      stopProgress();
+    }
+
+    fileEl.addEventListener("change", () => {
+      const file = fileEl.files && fileEl.files[0];
+      setPreview(file || null);
+    });
+
+    sampleKeyEl.addEventListener("change", () => {
+      syncSampleHint();
+    });
+
+    clearBtn.addEventListener("click", () => {
+      fileEl.value = "";
+      resetView();
+    });
+
+    async function runAnalysis(file) {
+      if (!file) {
+        setStatus("이미지 파일을 먼저 선택해주세요.", "error");
+        phaseHintEl.textContent = "파일 선택이 필요합니다.";
+        return;
+      }
+
+      const endpoint = endpointEl.value;
+      const conf = Number(confEl.value);
+      const confValue = Number.isFinite(conf) ? conf : 0.25;
+
+      const form = new FormData();
+      form.append("file", file);
+      form.append("model_type", modelTypeEl.value);
+      if (endpoint === "/vlm-analyze") {
+        form.append("language", "ko");
+      }
+
+      const url = `${endpoint}?conf=${confValue}`;
+
+      runBtn.disabled = true;
+      sampleBtn.disabled = true;
+      clearBtn.disabled = true;
+      setBadges([{ label: "RUNNING", tone: "warn" }]);
+      startProgress(endpoint);
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          body: form,
+        });
+
+        let payload;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = { error: "JSON 파싱 실패" };
+        }
+
+        outputEl.textContent = JSON.stringify(payload, null, 2);
+        renderInsights(response, payload);
+
+        const detCount = typeof payload.count === "number" ? String(payload.count) : "-";
+        const vlmState = payload.vlm_available === true ? "ON" : (payload.vlm_available === false ? "OFF" : "-");
+        setSummary(String(response.status), detCount, vlmState);
+
+        if (response.ok) {
+          setStatus(`완료: HTTP ${response.status}`, "ok");
+          const badgeItems = [{ label: `HTTP ${response.status}`, tone: "ok" }];
+          if (typeof payload.count === "number") {
+            badgeItems.push({ label: `DET ${payload.count}` });
+          }
+          if (payload?.medical_evidence?.grounded === true || Number(payload?.medical_evidence?.num_sources || 0) > 0) {
+            badgeItems.push({ label: "근거 있음 ✅", tone: "ok" });
+          }
+          if (payload?.vlm_analysis?.error) {
+            badgeItems.push({ label: "VLM TIMEOUT", tone: "warn" });
+          } else if (payload?.vlm_analysis?.interpretation) {
+            badgeItems.push({ label: "VLM OK", tone: "ok" });
+          }
+            if (payload?.medical_evidence?.error) {
+              phaseHintEl.textContent = "응답 성공. 단, RAG 근거 생성은 실패했습니다 (예: OpenAI quota).";
+              setStatus(`완료(부분): HTTP ${response.status}`, "warn");
+              badgeItems.push({ label: "RAG WARN", tone: "warn" });
+            } else if (payload?.medical_evidence?.reason === "no_evidence") {
+              phaseHintEl.textContent = "응답 성공. 다만 현재 문서 근거가 부족해 RAG 답변을 제한했습니다.";
+              setStatus(`완료(근거부족): HTTP ${response.status}`, "warn");
+              badgeItems.push({ label: "근거 부족 ⚠️", tone: "warn" });
+            } else {
+              phaseHintEl.textContent = "응답 수신 완료. 우측 JSON에서 상세 결과를 확인하세요.";
+              if (payload?.medical_evidence?.answer) {
+                badgeItems.push({ label: "RAG OK", tone: "ok" });
+              }
+          }
+          setBadges(badgeItems);
+        } else {
+          setStatus(`실패: HTTP ${response.status}`, "error");
+          phaseHintEl.textContent = "요청은 도달했지만 서버에서 에러를 반환했습니다.";
+          setBadges([{ label: `HTTP ${response.status}`, tone: "error" }]);
+        }
+      } catch (error) {
+        outputEl.textContent = JSON.stringify({ error: String(error) }, null, 2);
+        setInsight(insightSummaryEl, "요청 실패", "error");
+        setInsight(insightVlmEl, "서버 연결 실패로 VLM 결과 없음", "error");
+        setInsight(insightDetectionsEl, "-", "error");
+        setInsight(insightRagEl, "네트워크/서버 상태 확인 필요", "error");
+        setSummary("ERR", "-", "-");
+        setStatus("요청 실패", "error");
+        phaseHintEl.textContent = "서버 실행 상태, 포트, CORS/네트워크를 확인하세요.";
+        setBadges([{ label: "NETWORK ERROR", tone: "error" }]);
+      } finally {
+        stopProgress();
+        runBtn.disabled = false;
+        sampleBtn.disabled = false;
+        clearBtn.disabled = false;
+      }
+    }
+
+    runBtn.addEventListener("click", async () => {
+      const file = fileEl.files && fileEl.files[0];
+      await runAnalysis(file);
+    });
+
+    sampleBtn.addEventListener("click", async () => {
+      try {
+        const sampleKey = sampleKeyEl.value || "colon_polyp";
+        const meta = sampleMetaByKey[sampleKey] || sampleMetaByKey.colon_polyp;
+
+        const res = await fetch(`/demo/sample-image?key=${encodeURIComponent(sampleKey)}`);
+        if (!res.ok) {
+          throw new Error(`샘플 이미지 로딩 실패: HTTP ${res.status}`);
+        }
+        const blob = await res.blob();
+        const ext = blob.type === "image/png" ? "png" : "jpg";
+        const sampleFile = new File([blob], `${sampleKey}.${ext}`, { type: blob.type || "image/jpeg" });
+        setPreview(sampleFile);
+        endpointEl.value = "/vlm-analyze";
+        modelTypeEl.value = meta.model_type;
+        confEl.value = "0.25";
+        phaseHintEl.textContent = `${meta.label} 샘플 분석을 시작합니다.`;
+        await runAnalysis(sampleFile);
+      } catch (error) {
+        setStatus("샘플 실행 실패", "error");
+        phaseHintEl.textContent = String(error);
+      }
+    });
+
+    loadSampleOptions().finally(() => {
+      resetView();
+      syncSampleHint();
+    });
+  </script>
+</body>
+</html>

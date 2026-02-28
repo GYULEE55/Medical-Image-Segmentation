@@ -1,0 +1,9 @@
+Title: EMR and ESD: Indications, techniques and results.
+PMID: 35370049
+Journal: Surgical oncology
+Published: 2022-Aug
+URL: https://pubmed.ncbi.nlm.nih.gov/35370049/
+Authors: Rashid MU, Alomari M, Afraz S, Erim T
+
+Abstract:
+Endoscopic mucosal resection (EMR) and endoscopic submucosal dissection (ESD) are two well-known endoscopic resection procedures used for advance gastrointestinal lesions. As compared to standard polypectomy techniques, EMR and ESD provide wider and deeper resection margins and allow en bloc removal of lesions for more detailed pathology with curative intent for early neoplastic gastrointestinal lesions. Both procedures have their advantages and disadvantages which will be discussed in detail in this review article. Recently there have been advancements in the techniques of EMR and ESD with addition in new equipment. We will also discuss current guidelines recommending use of EMR and/or ESD in various clinical scenarios.

@@ -13,15 +13,15 @@ rag/vectorstore/ 에 ChromaDB가 생성됩니다.
 import os
 from pathlib import Path
 
-from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_community.document_loaders import PyMuPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 
 # ── 경로 설정 ──────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
-PDF_DIR = BASE_DIR / "docs"           # PDF 파일 저장 폴더
-CHROMA_DIR = BASE_DIR / "vectorstore" # ChromaDB 저장 폴더
+PDF_DIR = BASE_DIR / "docs"  # PDF 파일 저장 폴더
+CHROMA_DIR = BASE_DIR / "vectorstore"  # ChromaDB 저장 폴더
 COLLECTION_NAME = "medical_knowledge"
 
 # ── 청킹 설정 ──────────────────────────────────────────────────
@@ -32,25 +32,32 @@ CHUNK_SIZE = 512
 CHUNK_OVERLAP = 64
 
 
-def load_pdfs(pdf_dir: Path) -> list:
-    """PDF 폴더에서 모든 문서 로드 (페이지별 메타데이터 포함)"""
+def load_documents(doc_dir: Path) -> list:
     all_docs = []
-    pdf_files = list(pdf_dir.glob("*.pdf"))
+    pdf_files = sorted(doc_dir.rglob("*.pdf"))
+    text_files = sorted(doc_dir.rglob("*.txt")) + sorted(doc_dir.rglob("*.md"))
 
-    if not pdf_files:
-        print(f"[경고] {pdf_dir} 에 PDF 파일이 없습니다.")
-        print("  → rag/docs/ 폴더에 의료 문서 PDF를 넣어주세요.")
+    if not pdf_files and not text_files:
+        print(f"[경고] {doc_dir} 에 문서 파일이 없습니다.")
+        print("  → rag/docs/ 폴더에 PDF/TXT/MD 문서를 넣어주세요.")
         return []
 
     for pdf_path in pdf_files:
-        print(f"  로딩: {pdf_path.name}")
+        print(f"  PDF 로딩: {pdf_path.name}")
         loader = PyMuPDFLoader(
             str(pdf_path),
-            mode="page",  # 페이지별 Document 생성 → 출처 추적 용이
+            mode="page",
         )
         pages = loader.load()
         all_docs.extend(pages)
         print(f"    → {len(pages)} 페이지")
+
+    for text_path in text_files:
+        print(f"  텍스트 로딩: {text_path.name}")
+        loader = TextLoader(str(text_path), encoding="utf-8")
+        docs = loader.load()
+        all_docs.extend(docs)
+        print(f"    → {len(docs)} 문서")
 
     return all_docs
 
@@ -77,7 +84,7 @@ def build_vectorstore(chunks: list) -> Chroma:
     embeddings = HuggingFaceEmbeddings(
         model_name="BAAI/bge-m3",
         model_kwargs={
-            "device": "cpu",           # GPU 있으면 "cuda"
+            "device": "cpu",  # GPU 있으면 "cuda"
             "trust_remote_code": True,
         },
         encode_kwargs={
@@ -101,8 +108,8 @@ def main():
     print("=" * 50)
 
     # 1. PDF 로딩
-    print(f"\n[1/3] PDF 로딩: {PDF_DIR}")
-    documents = load_pdfs(PDF_DIR)
+    print(f"\n[1/3] 문서 로딩: {PDF_DIR}")
+    documents = load_documents(PDF_DIR)
     if not documents:
         return
     print(f"  → 총 {len(documents)} 페이지 로드 완료")

@@ -1,0 +1,10 @@
+Title: EMR/ESD: Techniques, Complications, and Evidence.
+PMID: 32542462
+Journal: Current gastroenterology reports
+Published: 2020-Jun-15
+URL: https://pubmed.ncbi.nlm.nih.gov/32542462/
+Authors: Ahmed Y, Othman M
+
+Abstract:
+[PURPOSE OF REVIEW] To discuss endoscopic resection techniques of early gastrointestinal malignancy. The review will focus on the indications and outcomes of endoscopic mucosal resection (EMR) and endoscopic submucosal dissection (ESD).
+[RECENT FINDINGS] EMR is indicated for upper GI lesions less than 20 mm provided they can be easily lifted and have a low risk of submucosal invasion (SMI). ESD should be considered for esophageal and gastric lesions that are bulky, show intramucosal carcinoma, or have a risk of superficial submucosal invasion. With regard to colonic polyps, EMR is acceptable for the removal of large colonic polyps using a piecemeal technique. ESD can be reserved for rectal neuroendocrine tumors, fibrotic polyps, or polyps harboring early malignancy. In selected cases, particularly in lesions less than 2 cm in size, EMR can be safe and effective. For larger lesions or lesions with submucosal invasion, ESD is effective and curative. Choosing the best approach can be tailored for each patient depending on lesion size, pathology, and availability of local expertise.

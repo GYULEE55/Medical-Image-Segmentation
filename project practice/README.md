@@ -1,6 +1,14 @@
-# Medical AI Assistant — Vision + LLM + VLM 통합 서비스
+# Medical AI Assistant — 현장 문제 해결형 의료영상 AI PoC
 
-> 의료 영상 병변 검출(YOLOv8) + 의료 지식 RAG + VLM(LLaVA) End-to-End 파이프라인
+> 목표: "탐지만 되는 AI"를 넘어, **근거까지 확인 가능한 의료영상 보조 도구** 만들기
+
+의료 현장에서는 다음 3가지가 동시에 필요합니다.
+- 놓침을 줄이는 **정량 검출**
+- 결과를 이해할 수 있는 **정성 해석**
+- 신뢰할 수 있는 **문헌 근거**
+
+이 프로젝트는 이를 위해 **YOLO(검출) + VLM(해석) + RAG(근거)**를 한 흐름으로 통합했습니다.
+또한 근거가 부족하면 추측하지 않고 "근거 없음"을 명확히 반환하도록 설계했습니다.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
@@ -8,8 +16,70 @@
 ![Docker](https://img.shields.io/badge/Docker-CPU--only-blue)
 ![pytest](https://img.shields.io/badge/pytest-29_passed%2C_1_skipped-brightgreen)
 
-내시경/X-ray 이미지에서 병변을 검출하고, 검출 결과를 기반으로 **논문·가이드라인 기반 의료 지식을 자동 제공**하는 서비스입니다.  
-위장 폴립(Kvasir-SEG)과 치과 질환(DENTEX) 두 도메인을 동일 아키텍처로 지원하며, 데이터 전처리부터 학습·서빙·배포까지 전체 MLOps 파이프라인을 구축했습니다.
+내시경/X-ray 이미지에서 병변을 검출하고, 검출 결과를 기반으로 **논문·가이드라인 기반 의료 지식을 자동 제공**합니다. 위장 폴립(Kvasir-SEG)과 치과 질환(DENTEX) 두 도메인을 동일 아키텍처로 지원합니다.
+
+---
+
+## 🩺 현장 문제에서 출발한 이유
+
+이 프로젝트는 "모델 성능 데모"가 아니라, 실제 임상에서 자주 생기는 아래 문제를 줄이기 위한 PoC입니다.
+
+- **문제 1: 놓침(미검출) 리스크**
+  - 대장내시경에서도 폴립/선종은 크기에 따라 놓칠 수 있습니다. 특히 작은 병변 miss rate가 높게 보고됩니다.
+  - 참고: Van Rijn et al., tandem colonoscopy 메타분석 (PubMed)
+    - https://pubmed.ncbi.nlm.nih.gov/16716777/
+- **문제 2: 판독 업무 과부하와 인력 부담**
+  - 영상량은 증가하는데 전문 인력은 부족해, 판독 품질과 일관성 유지가 어려워집니다.
+  - 참고: Neiman Health Policy Institute radiologist shortage 전망
+    - https://www.neimanhpi.org/press-releases/new-study-projects-radiologist-shortage-through-2055/
+- **문제 3: "왜 이런 결과인지" 설명/근거 부족**
+  - 의료 AI는 단순 "탐지됨"만으로는 신뢰를 얻기 어렵고, 근거 문헌/설명 가능성이 중요합니다.
+  - 참고: WHO AI for Health guidance (투명성/설명가능성/거버넌스 강조)
+    - https://www.who.int/publications/i/item/9789240029200
+
+이 문제를 줄이기 위해, 이 프로젝트는 **검출(정량) + 해석(정성) + 문헌근거(RAG)**를 한 화면/한 API 흐름으로 통합했습니다.
+
+---
+
+## 👤 누가 쓰는가 (사용자 관점)
+
+- **1차 사용자: 의료 AI 검토자/개발자**
+  - 모델 결과를 숫자만 보지 않고, 근거 문서와 함께 검증 가능
+- **2차 사용자: 데모 평가자(면접관, 협업 파트너)**
+  - "기술 나열"이 아니라 "현장 문제 -> 해결 설계 -> 한계"를 빠르게 이해 가능
+- **실사용 가정 사용자: 임상의 보조 도구 운영팀**
+  - 단독 진단 도구가 아니라, 판독 보조/우선순위 확인/설명 보강 목적
+
+---
+
+## 🎯 프로젝트 목표 (명확한 성공 기준)
+
+- **Goal A: 놓치지 않기(민감도 중심)**
+  - 폴립 검출 Recall을 핵심 지표로 관리
+- **Goal B: 근거 없는 답변 줄이기**
+  - RAG 근거가 없으면 "모른다"를 명확히 반환
+- **Goal C: 사용자가 이해하기 쉬운 결과**
+  - 결과를 "검출 요약 / VLM 해석 / RAG 근거"로 분리해 표시
+
+상세한 문제-해결 매핑은 `CLINICAL_PROBLEM_MAP.md` 문서에 정리했습니다.
+
+---
+
+## 🗣️ 1분 설명 (면접/소개용)
+
+"의료 영상 AI는 보통 두 가지 한계가 있습니다. 첫째, 작은 병변을 놓칠 수 있고, 둘째, 결과에 대한 근거 설명이 부족합니다.
+이 프로젝트는 그 문제를 줄이기 위해 검출(YOLO), 해석(VLM), 문헌근거(RAG)를 하나의 흐름으로 연결했습니다.
+그리고 문서 근거가 없을 때는 추측하지 않고 `근거 없음`을 명확히 반환하도록 안전장치를 넣었습니다.
+즉, 정확도 데모가 아니라 '현장에서 신뢰할 수 있는 보조 도구'를 목표로 만든 PoC입니다."
+
+---
+
+## ✅ 사용자 친화 설계 원칙
+
+- **쉽게 읽히는 결과 구조**: `검출 요약 / VLM 해석 / RAG 근거`로 분리 표시
+- **오해 방지 우선**: RAG 근거가 없으면 길게 설명하지 않고 "근거 없음" 명확히 표시
+- **실무 의사결정 관점**: "어떤 병변이, 얼마나 신뢰도로, 어떤 문헌으로 뒷받침되는지"를 한 번에 제공
+- **빠른 검증 흐름**: `/demo`에서 업로드 1회로 전 과정 확인 가능
 
 ---
 
@@ -140,6 +210,9 @@ pip install -r requirements.txt
 # RAG 벡터스토어 구축 (최초 1회)
 python rag/ingest.py
 
+# PubMed 초록 자동 수집 + 인덱싱
+python rag/auto_ingest.py --topics "colonoscopy polyp guideline" "endoscopic mucosal resection" --max-results 20
+
 # 서버 실행
 python -m uvicorn api.app:app --reload --port 8000
 ```
@@ -147,13 +220,24 @@ python -m uvicorn api.app:app --reload --port 8000
 `.env` 파일 생성:
 ```
 OPENAI_API_KEY=sk-...
+PUBMED_EMAIL=your_email@example.com
+# 선택: NCBI 요청 한도 상향(초당 10건)용
+# PUBMED_API_KEY=...
 MODEL_PATH=./best.pt
 DENTAL_MODEL_PATH=./best_dentex.pt
+RAG_LLM_PROVIDER=ollama
+RAG_OLLAMA_MODEL=llama3.1:8b
+RAG_OLLAMA_BASE_URL=http://localhost:11434
+RAG_USE_OPENAI_FALLBACK=false
 VLM_TIMEOUT_SECONDS=180
 VLM_MAX_EDGE=960
 VLM_JPEG_QUALITY=75
 VLM_NUM_PREDICT=512
 ```
+
+`OPENAI_API_KEY`는 선택입니다. 로컬 모드(`RAG_LLM_PROVIDER=ollama`)에서는 OpenAI 과금 없이 RAG를 사용할 수 있습니다.
+
+`PUBMED_EMAIL`은 `rag/auto_ingest.py` 실행 시 필수입니다. 자동 수집 문서는 `rag/docs/auto/`에 저장되고, 기존 `rag/ingest.py`로 함께 인덱싱됩니다.
 
 ### Docker
 
@@ -174,6 +258,14 @@ docker compose up --build
 ```bash
 curl http://localhost:8000/health
 ```
+
+RAG 상태는 별도 엔드포인트에서 확인:
+
+```bash
+curl http://localhost:8000/ask/health
+```
+
+`rag_llm_provider`가 `ollama`면 로컬 RAG 생성 모델이 사용 중입니다.
 
 ---
 
