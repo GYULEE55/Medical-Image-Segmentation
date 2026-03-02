@@ -31,6 +31,9 @@ nul
 .vscode/
 .idea/
 
+# AI 컨텍스트 (프라이빗)
+AGENTS.md
+
 # DB (로컬 실험용)
 *.db
 

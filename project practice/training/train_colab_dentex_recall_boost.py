@@ -8,6 +8,7 @@
 실험 구성:
   1) baseline 재현: 현재 설정을 그대로 다시 학습
   2) recall_boost: Recall 개선 중심 설정 (imgsz↑, patience↑, optimizer/lr 조정, augment 강화)
+  3) balance_recover: Recall 개선폭 유지하면서 mAP 회복 시도
 
 실무 포인트:
   - "좋아 보이는 데모"가 아니라 "왜 이 실험을 했는지"가 명확해야 함
@@ -133,6 +134,53 @@
 
 """
 ====================================
+[셀 6-2] 실험 3 — balance_recover (추천)
+====================================
+핵심 의도:
+  - recall_boost에서 오른 Recall을 유지하면서
+    떨어진 mAP를 다시 끌어올리는 균형 실험
+
+변경점:
+  - lr0: 0.003 -> 0.0025 (조금 더 안정적으로)
+  - epochs: 140 -> 120 (과도한 후반 변동 감소)
+  - mixup: 0.1 -> 0.05 (과한 혼합으로 인한 정밀도 저하 완화)
+  - mosaic: 0.5 유지, imgsz=768 유지
+"""
+# balance_recover_kwargs = dict(
+#     data='/content/dentex.yaml',
+#     epochs=120,
+#     imgsz=768,
+#     batch=12,
+#     device=0,
+#     optimizer='AdamW',
+#     lr0=0.0025,
+#     lrf=0.0005,
+#     weight_decay=0.0005,
+#     patience=20,
+#     cos_lr=True,
+#     # ---- recall 유지 + mAP 회복 균형 ----
+#     degrees=8.0,
+#     translate=0.12,
+#     scale=0.30,
+#     shear=2.0,
+#     perspective=0.0,
+#     fliplr=0.5,
+#     flipud=0.0,
+#     mosaic=0.5,
+#     mixup=0.05,
+#     hsv_h=0.01,
+#     hsv_s=0.2,
+#     hsv_v=0.2,
+#     conf=0.20,
+#     save=True,
+#     project='/content/drive/MyDrive/yolo-results',
+#     name='dentex-balance-recover-v1',
+# )
+#
+# run_experiment('dentex-balance-recover-v1', balance_recover_kwargs)
+
+"""
+====================================
 [셀 7] 최종 검증 + 클래스별 출력
 ====================================
 """
@@ -157,6 +205,7 @@
 #
 # print_eval('dentex-baseline-v2')
 # print_eval('dentex-recall-boost-v1')
+# print_eval('dentex-balance-recover-v1')
 
 """
 ====================================
@@ -166,7 +215,7 @@
 # import os
 # import shutil
 #
-# for run_name in ['dentex-baseline-v2', 'dentex-recall-boost-v1']:
+# for run_name in ['dentex-baseline-v2', 'dentex-recall-boost-v1', 'dentex-balance-recover-v1']:
 #     src = f'/content/drive/MyDrive/yolo-results/{run_name}/results.csv'
 #     dst = f'/content/drive/MyDrive/yolo-results/{run_name}/{run_name}-results.csv'
 #     if os.path.exists(src):
@@ -182,6 +231,6 @@
 """
 # print('''
 # [면접용 요약]
-# - baseline 대비 recall_boost 실험에서 Recall이 개선되었는지 수치로 검증했습니다.
-# - 단순 mAP가 아니라 Recall/클래스별 AP를 함께 비교해 미검출 리스크를 줄이는 방향으로 최적화했습니다.
+# - baseline 대비 recall_boost로 Recall을 끌어올리고, balance_recover로 mAP 회복을 시도했습니다.
+# - 단순 mAP가 아니라 Recall/클래스별 AP/trade-off를 함께 비교해 실무형 의사결정을 했습니다.
 # ''')
