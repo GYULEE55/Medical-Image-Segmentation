@@ -7,7 +7,7 @@ Medical AI Assistant API — V4 (YOLOv8 + RAG + VLM + Multi-Model)
   POST /ask             — 의료 지식 Q&A (RAG) [V2]
   POST /analyze         — 이미지 검출 + 의료 지식 통합 분석 [V3]
   POST /vlm-analyze     — VLM 직접 해석 + 검출 + RAG 근거 보강 [V4 핵심]
-  GET  /ask/health      — RAG 상태 확인
+  GET  /ask/health      — RAG 상태 
 
 V1: YOLOv8n-seg로 병변 검출 + 세그멘테이션 (polyp/dental 멀티모델)
 V2: LangChain + ChromaDB + GPT-4o-mini로 의료 지식 Q&A (출처 포함)
