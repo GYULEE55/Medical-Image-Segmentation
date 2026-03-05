@@ -34,6 +34,14 @@ nul
 # AI 컨텍스트 (프라이빗)
 AGENTS.md
 
+# Portfolio-only docs (keep local, not tracked on GitHub)
+project practice/AI_JOB_MODEL_UPGRADE_PLAN.md
+project practice/CLINICAL_PROBLEM_MAP.md
+project practice/PROJECT_REVIEW.md
+project practice/SETUP_MACBOOK.md
+project practice/STORY_PITCH.md
+project practice/reports/dentex_recall_improvement.md
+
 # DB (로컬 실험용)
 *.db
 
