@@ -1,0 +1,26 @@
+training:
+  seed: 42
+  epochs: 50
+  batch_size: 16
+  imgsz: 640
+  patience: 10
+  lr0: 0.01
+  optimizer: SGD
+
+models:
+  polyp:
+    architecture: yolov8n-seg
+    dataset: kvasir-seg
+    weights: best.pt
+  dental:
+    architecture: yolov8n-seg
+    dataset: dentex
+    weights: best_dentex.pt
+
+inference:
+  confidence_threshold: 0.25
+
+vlm:
+  model: llava
+  temperature: 0.2
+  num_predict: 512

@@ -3,6 +3,25 @@
 Google Colab에서 셀별로 복사해서 실행하세요.
 
 ====================================
+[셀 0] 재현성 설정 — 난수 시드 고정
+====================================
+"""
+
+# 재현성을 위해 모든 난수 생성기의 시드를 고정합니다.
+# 이렇게 하면 같은 코드를 여러 번 실행해도 동일한 결과를 얻을 수 있습니다.
+import random
+import numpy as np
+import torch
+
+SEED = 42
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
+
+"""
+====================================
 [셀 1] 환경 세팅 — GPU 확인 & 라이브러리 설치
 ====================================
 """
