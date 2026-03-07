@@ -46,5 +46,4 @@
 | **RAG** | LangChain LCEL + ChromaDB | 최신 패턴, 한국어+영어 |
 | **Embedding** | BAAI/bge-m3 | 다국어, 의료 문서 최적화 |
 | **LLM** | GPT-4o-mini | 저렴 + 충분한 품질 |
-| **Infra** | Docker (CPU-only) | GPU 없는 병원 환경 배포 |
 | **Test** | pytest 25개 | CI 호환 설계 |
