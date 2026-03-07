@@ -4,9 +4,9 @@ import cv2
 import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-import api.state as state
-from api.constants import class_names_kr
-from api.services import observe_inference, validate_upload_size
+import api.state as state  # pyright: ignore[reportMissingImports]
+from api.constants import class_names_kr  # pyright: ignore[reportMissingImports]
+from api.services import observe_inference, validate_upload_size  # pyright: ignore[reportMissingImports]
 from core.structured_logging import get_logger
 
 router = APIRouter()
@@ -48,7 +48,7 @@ async def analyze_with_knowledge(
     detected_classes = set()
 
     if result.boxes is not None:
-        for i, box in enumerate(result.boxes):
+        for i, box in enumerate(result.boxes):  # type: ignore[arg-type]
             class_name = result.names[int(box.cls)]
             detected_classes.add(class_name)
 

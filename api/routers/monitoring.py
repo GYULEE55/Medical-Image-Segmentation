@@ -6,8 +6,8 @@ import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-import api.state as state
-from api.services import observe_inference, validate_upload_size
+import api.state as state  # pyright: ignore[reportMissingImports]
+from api.services import observe_inference, validate_upload_size  # pyright: ignore[reportMissingImports]
 from core.structured_logging import get_logger
 
 router = APIRouter()
@@ -71,7 +71,7 @@ async def explain_with_heatmap(
     detections = []
 
     if result.boxes is not None:
-        for i, box in enumerate(result.boxes):
+        for i, box in enumerate(result.boxes):  # type: ignore[arg-type]
             conf_score = float(box.conf)
             x1, y1, x2, y2 = [int(v) for v in box.xyxy[0].tolist()]
             x1, y1 = max(0, x1), max(0, y1)

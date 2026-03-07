@@ -8,9 +8,14 @@ import cv2
 import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-import api.state as state
-from api.constants import NO_EVIDENCE_TEXT, VLM_JPEG_QUALITY, VLM_MAX_EDGE, class_names_kr
-from api.services import (
+import api.state as state  # pyright: ignore[reportMissingImports]
+from api.constants import (  # pyright: ignore[reportMissingImports]
+    NO_EVIDENCE_TEXT,
+    VLM_JPEG_QUALITY,
+    VLM_MAX_EDGE,
+    class_names_kr,
+)
+from api.services import (  # pyright: ignore[reportMissingImports]
     fetch_pubmed_web_evidence,
     observe_inference,
     prepare_vlm_image_bytes,
@@ -183,7 +188,7 @@ async def vlm_analyze_with_knowledge(
         result = results[0]
 
         if result.boxes is not None:
-            for i, box in enumerate(result.boxes):
+            for i, box in enumerate(result.boxes):  # type: ignore[arg-type]
                 class_name = result.names[int(box.cls)]
                 detected_classes.add(class_name)
 

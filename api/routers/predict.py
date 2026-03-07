@@ -45,7 +45,7 @@ async def predict(
 
     detections = []
     if result.boxes is not None:
-        for i in range(len(result.boxes)):  # pyright: ignore[reportArgumentType]
+        for i in range(len(result.boxes)):  # type: ignore[arg-type]
             box = result.boxes[i]
             det = {
                 "class": result.names[int(box.cls)],
