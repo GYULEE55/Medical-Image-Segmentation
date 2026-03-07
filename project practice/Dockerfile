@@ -30,6 +30,15 @@ COPY best_dentex.pt* ./
 COPY rag/*.py rag/
 COPY rag/__init__.py rag/
 
+# V3/V4: 핵심 모듈 (structured logging, VLM client, experiment DB, benchmark)
+COPY core/ core/
+COPY vlm/ vlm/
+COPY db/ db/
+COPY eval/ eval/
+
+# UI (데모 HTML)
+COPY ui/ ui/
+
 # vectorstore, docs 디렉토리 생성 (볼륨 마운트 대상)
 RUN mkdir -p rag/vectorstore rag/docs
 
