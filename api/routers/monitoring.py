@@ -6,8 +6,8 @@ import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from .. import state
-from ..services import observe_inference, validate_upload_size
+import api.state as state
+from api.services import observe_inference, validate_upload_size
 from core.structured_logging import get_logger
 
 router = APIRouter()

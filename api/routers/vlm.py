@@ -8,9 +8,9 @@ import cv2
 import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-from .. import state
-from ..constants import NO_EVIDENCE_TEXT, VLM_JPEG_QUALITY, VLM_MAX_EDGE, class_names_kr
-from ..services import (
+import api.state as state
+from api.constants import NO_EVIDENCE_TEXT, VLM_JPEG_QUALITY, VLM_MAX_EDGE, class_names_kr
+from api.services import (
     fetch_pubmed_web_evidence,
     observe_inference,
     prepare_vlm_image_bytes,

@@ -8,16 +8,18 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import ultralytics
 
-import api.state as state
-from api.constants import MODEL_PATHS, SAMPLE_REGISTRY, VLM_TIMEOUT_SECONDS
-from api.routers.analyze import router as analyze_router
-from api.routers.ask import router as ask_router
-from api.routers.monitoring import router as monitoring_router
-from api.routers.predict import router as predict_router
-from api.routers.vlm import router as vlm_router
+import api.state as state  # pyright: ignore[reportMissingImports]
+from api.constants import MODEL_PATHS, SAMPLE_REGISTRY, VLM_TIMEOUT_SECONDS  # pyright: ignore[reportMissingImports]
+from api.routers.analyze import router as analyze_router  # pyright: ignore[reportMissingImports]
+from api.routers.ask import router as ask_router  # pyright: ignore[reportMissingImports]
+from api.routers.monitoring import router as monitoring_router  # pyright: ignore[reportMissingImports]
+from api.routers.predict import router as predict_router  # pyright: ignore[reportMissingImports]
+from api.routers.vlm import router as vlm_router  # pyright: ignore[reportMissingImports]
+from api.state import cleanup_expired_jobs  # pyright: ignore[reportMissingImports]
 from core.structured_logging import (
     bind_request_context,
     clear_request_context,
@@ -95,6 +97,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    cleanup_expired_jobs()
     if state.vlm_client is not None:
         await state.vlm_client.close()
 
@@ -118,6 +121,14 @@ app = FastAPI(
     """,
     version="4.0.0",
     lifespan=lifespan,
+)
+
+# CORS 미들웨어 추가 — 모든 출처에서 API 접근 허용
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

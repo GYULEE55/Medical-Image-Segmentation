@@ -2,8 +2,8 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
-from .. import state
-from ..schemas import AskRequest, AskResponse, SourceInfo
+import api.state as state  # pyright: ignore[reportMissingImports]
+from api.schemas import AskRequest, AskResponse, SourceInfo  # pyright: ignore[reportMissingImports]
 
 router = APIRouter()
 

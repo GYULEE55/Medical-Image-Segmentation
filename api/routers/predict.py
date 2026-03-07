@@ -4,8 +4,8 @@ import cv2
 import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-import api.state as state
-from api.services import observe_inference, validate_upload_size
+import api.state as state  # pyright: ignore[reportMissingImports]
+from api.services import observe_inference, validate_upload_size  # pyright: ignore[reportMissingImports]
 from core.structured_logging import get_logger
 
 router = APIRouter()
@@ -45,7 +45,8 @@ async def predict(
 
     detections = []
     if result.boxes is not None:
-        for i, box in enumerate(result.boxes):
+        for i in range(len(result.boxes)):  # pyright: ignore[reportArgumentType]
+            box = result.boxes[i]
             det = {
                 "class": result.names[int(box.cls)],
                 "confidence": round(float(box.conf), 4),

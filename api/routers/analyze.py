@@ -4,9 +4,9 @@ import cv2
 import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-from .. import state
-from ..constants import class_names_kr
-from ..services import observe_inference, validate_upload_size
+import api.state as state
+from api.constants import class_names_kr
+from api.services import observe_inference, validate_upload_size
 from core.structured_logging import get_logger
 
 router = APIRouter()

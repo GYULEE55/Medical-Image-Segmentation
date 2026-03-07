@@ -1,3 +1,4 @@
+import time
 from typing import Any, Dict, Optional
 
 from prometheus_client import Counter, Gauge, Histogram
@@ -7,6 +8,23 @@ models: Dict[str, YOLO] = {}
 rag_chain: Optional[Any] = None
 vlm_client: Optional[Any] = None
 async_jobs: Dict[str, Dict[str, Any]] = {}
+
+MAX_JOBS = 100
+JOB_TTL_SECONDS = 3600
+
+
+def cleanup_expired_jobs() -> None:
+    """완료된 job을 TTL 기반으로 자동 정리 및 최대 저장 건수 제한"""
+    now = time.time()
+    expired = [k for k, v in async_jobs.items() if v.get("created_at", now) + JOB_TTL_SECONDS < now]
+    for k in expired:
+        del async_jobs[k]
+
+    if len(async_jobs) > MAX_JOBS:
+        oldest = sorted(async_jobs.keys(), key=lambda k: async_jobs[k].get("created_at", 0))
+        for k in oldest[: len(async_jobs) - MAX_JOBS]:
+            del async_jobs[k]
+
 
 HTTP_REQUEST_TOTAL = Counter(
     "medical_http_requests_total",

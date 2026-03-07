@@ -9,8 +9,8 @@ import httpx
 import numpy as np
 from fastapi import HTTPException
 
-from . import state
-from .constants import (
+import api.state as state  # pyright: ignore[reportMissingImports]
+from api.constants import (  # pyright: ignore[reportMissingImports]
     MAX_UPLOAD_BYTES,
     PUBMED_EFETCH_URL,
     PUBMED_ESEARCH_URL,
