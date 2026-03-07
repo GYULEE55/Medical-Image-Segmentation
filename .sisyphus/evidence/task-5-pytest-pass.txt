@@ -1,0 +1,46 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.9, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/iseung-gyu/bmad-project/i want to get a job!!/Medical-Image-Segmentation
+plugins: anyio-4.12.1
+collecting ... collected 37 items
+
+tests/test_api.py::TestHealth::test_health_returns_ok PASSED             [  2%]
+tests/test_api.py::TestHealth::test_health_v1_model_info PASSED          [  5%]
+tests/test_api.py::TestHealth::test_health_v2_rag_info PASSED            [  8%]
+tests/test_api.py::TestHealth::test_rag_health_endpoint PASSED           [ 10%]
+tests/test_api.py::TestHealth::test_health_v4_vlm_info PASSED            [ 13%]
+tests/test_api.py::TestPredict::test_predict_valid_image PASSED          [ 16%]
+tests/test_api.py::TestPredict::test_predict_default_model_type PASSED   [ 18%]
+tests/test_api.py::TestPredict::test_predict_explicit_polyp_model PASSED [ 21%]
+tests/test_api.py::TestPredict::test_predict_invalid_model_type PASSED   [ 24%]
+tests/test_api.py::TestPredict::test_predict_response_image_size PASSED  [ 27%]
+tests/test_api.py::TestPredict::test_predict_with_custom_conf PASSED     [ 29%]
+tests/test_api.py::TestPredict::test_predict_filename_preserved PASSED   [ 32%]
+tests/test_api.py::TestPredict::test_predict_png_format PASSED           [ 35%]
+tests/test_api.py::TestInputValidation::test_predict_no_file PASSED      [ 37%]
+tests/test_api.py::TestInputValidation::test_predict_invalid_image_data PASSED [ 40%]
+tests/test_api.py::TestInputValidation::test_predict_non_image_content_type PASSED [ 43%]
+tests/test_api.py::TestInputValidation::test_ask_empty_question PASSED   [ 45%]
+tests/test_api.py::TestRAG::test_ask_returns_valid_status PASSED         [ 48%]
+tests/test_api.py::TestRAG::test_ask_response_format_when_available SKIPPED [ 51%]
+tests/test_api.py::TestRAG::test_ask_with_custom_k PASSED                [ 54%]
+tests/test_api.py::TestAnalyze::test_analyze_returns_valid_response PASSED [ 56%]
+tests/test_api.py::TestAnalyze::test_analyze_default_model_type PASSED   [ 59%]
+tests/test_api.py::TestAnalyze::test_analyze_no_detection_no_rag PASSED  [ 62%]
+tests/test_api.py::TestAnalyze::test_analyze_invalid_file PASSED         [ 64%]
+tests/test_api.py::TestAnalyze::test_analyze_with_custom_conf PASSED     [ 67%]
+tests/test_api.py::TestAnalyze::test_analyze_invalid_model_type PASSED   [ 70%]
+tests/test_api.py::TestVLMAnalyze::test_vlm_analyze_returns_valid_response PASSED [ 72%]
+tests/test_api.py::TestVLMAnalyze::test_vlm_analyze_non_image_file_returns_400 PASSED [ 75%]
+tests/test_api.py::TestVLMAnalyze::test_vlm_analyze_invalid_image_bytes_returns_400 PASSED [ 78%]
+tests/test_api.py::TestVLMAnalyze::test_vlm_analyze_with_custom_model_type PASSED [ 81%]
+tests/test_api.py::TestMetrics::test_metrics_endpoint_returns_prometheus_text PASSED [ 83%]
+tests/test_api.py::TestExplain::test_explain_returns_overlay PASSED      [ 86%]
+tests/test_api.py::TestAsyncVLM::test_async_vlm_job_lifecycle PASSED     [ 89%]
+tests/test_api.py::TestAsyncVLM::test_async_job_not_found PASSED         [ 91%]
+tests/test_auto_ingest.py::test_parse_pubmed_xml_extracts_required_fields PASSED [ 94%]
+tests/test_auto_ingest.py::test_save_articles_writes_txt_and_skips_duplicates PASSED [ 97%]
+tests/test_yolo.py::test_yolo_inference_smoke PASSED                     [100%]
+
+======================== 36 passed, 1 skipped in 4.63s =========================

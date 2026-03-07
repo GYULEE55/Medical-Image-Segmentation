@@ -16,21 +16,45 @@ V4: VLM(LLaVA)이 이미지 직접 해석 → YOLOv8 검출 → RAG 문헌 근�
 """
 
 import os
+import uuid
+import asyncio
+import base64
+import io
+import time
+import re
 import cv2
 import numpy as np
 from pathlib import Path
 from contextlib import asynccontextmanager
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
+import xml.etree.ElementTree as ET
 
 # .env 파일에서 환경변수 로드 (OPENAI_API_KEY 등)
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent / ".env", override=True)
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from ultralytics import YOLO
+import httpx
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Gauge,
+    Histogram,
+    generate_latest,
+)
+from core.structured_logging import (
+    bind_request_context,
+    clear_request_context,
+    configure_logging,
+    get_logger,
+)
+
+configure_logging()
+logger = get_logger("api.app")
 
 # ── 경로 설정 ──────────────────────────────────────────────────
 # 멀티모델 지원: polyp(위장 폴립) + dental(치과 X-ray)
@@ -44,12 +68,60 @@ MODEL_PATHS: Dict[str, str] = {
 VLM_MAX_EDGE = int(os.getenv("VLM_MAX_EDGE", "960"))
 VLM_JPEG_QUALITY = int(os.getenv("VLM_JPEG_QUALITY", "75"))
 VLM_TIMEOUT_SECONDS = float(os.getenv("VLM_TIMEOUT_SECONDS", "180"))
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", "10485760"))
+WEB_EVIDENCE_TIMEOUT_SECONDS = float(os.getenv("WEB_EVIDENCE_TIMEOUT_SECONDS", "8"))
+WEB_EVIDENCE_MAX_ARTICLES = int(os.getenv("WEB_EVIDENCE_MAX_ARTICLES", "3"))
+PUBMED_ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+PUBMED_EFETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
 
 # ── 전역 상태 ──────────────────────────────────────────────────
 models: Dict[str, YOLO] = {}  # 멀티모델 딕셔너리 {"polyp": YOLO, "dental": YOLO}
 rag_chain = None  # RAG 체인 (V2)
 vlm_client = None  # VLM 클라이언트 (V4)
 NO_EVIDENCE_TEXT = "제공된 문서에서 해당 정보를 찾을 수 없습니다."
+async_jobs: Dict[str, Dict[str, Any]] = {}
+
+HTTP_REQUEST_TOTAL = Counter(
+    "medical_http_requests_total",
+    "Total HTTP requests",
+    ["method", "path", "status_code"],
+)
+HTTP_REQUEST_DURATION_SECONDS = Histogram(
+    "medical_http_request_duration_seconds",
+    "HTTP request duration seconds",
+    ["method", "path"],
+)
+MODEL_INFERENCE_TOTAL = Counter(
+    "medical_model_inference_total",
+    "Total model inference executions",
+    ["endpoint", "model_type"],
+)
+MODEL_INFERENCE_DURATION_SECONDS = Histogram(
+    "medical_model_inference_duration_seconds",
+    "Model inference duration seconds",
+    ["endpoint", "model_type"],
+    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 180.0),
+)
+PROCESS_MEMORY_BYTES = Gauge(
+    "medical_process_memory_bytes",
+    "Process resident memory bytes",
+)
+
+
+def _observe_inference(endpoint: str, model_type: str, started_at: float) -> float:
+    elapsed = time.perf_counter() - started_at
+    MODEL_INFERENCE_TOTAL.labels(endpoint=endpoint, model_type=model_type).inc()
+    MODEL_INFERENCE_DURATION_SECONDS.labels(
+        endpoint=endpoint, model_type=model_type
+    ).observe(elapsed)
+    try:
+        import psutil
+
+        process = psutil.Process(os.getpid())
+        PROCESS_MEMORY_BYTES.set(process.memory_info().rss)
+    except Exception:
+        pass
+    return elapsed
 
 
 def _prepare_vlm_image_bytes(img: np.ndarray, original_bytes: bytes):
@@ -74,6 +146,154 @@ def _prepare_vlm_image_bytes(img: np.ndarray, original_bytes: bytes):
     return encoded.tobytes(), {"resized": True, "width": new_w, "height": new_h}
 
 
+def _validate_upload_size(contents: bytes) -> None:
+    if not contents:
+        raise HTTPException(400, "빈 파일은 처리할 수 없습니다")
+    if len(contents) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            413,
+            f"파일이 너무 큽니다. 최대 {MAX_UPLOAD_BYTES} bytes 까지 허용됩니다",
+        )
+
+
+def _compact_text(text: Any, max_len: int = 220) -> str:
+    compact = re.sub(r"\s+", " ", str(text or "")).strip()
+    if not compact:
+        return ""
+    if len(compact) <= max_len:
+        return compact
+    return compact[: max_len - 3] + "..."
+
+
+def _extract_pubmed_abstract(article: ET.Element) -> str:
+    abstract_nodes = article.findall(".//Abstract/AbstractText")
+    if not abstract_nodes:
+        return ""
+
+    sections: list[str] = []
+    for node in abstract_nodes:
+        section_text = "".join(node.itertext()).strip()
+        if section_text:
+            sections.append(section_text)
+    return "\n".join(sections).strip()
+
+
+def _extract_pubmed_year(article: ET.Element) -> str:
+    pub_date = article.find(".//Journal/JournalIssue/PubDate")
+    if pub_date is None:
+        return "N/A"
+    year = (pub_date.findtext("Year") or "").strip()
+    if year:
+        return year
+    medline_date = (pub_date.findtext("MedlineDate") or "").strip()
+    return medline_date[:4] if medline_date else "N/A"
+
+
+def _parse_pubmed_articles(xml_text: str) -> list[dict]:
+    root = ET.fromstring(xml_text)
+    rows: list[dict] = []
+
+    for entry in root.findall(".//PubmedArticle"):
+        pmid = (entry.findtext(".//PMID") or "").strip()
+        article = entry.find(".//Article")
+        if not pmid or article is None:
+            continue
+
+        title = "".join(
+            (article.find("ArticleTitle") or ET.Element("x")).itertext()
+        ).strip()
+        journal = (
+            article.findtext(".//Journal/Title") or ""
+        ).strip() or "Unknown Journal"
+        abstract = _extract_pubmed_abstract(article)
+        year = _extract_pubmed_year(article)
+
+        rows.append(
+            {
+                "pmid": pmid,
+                "title": title or "Untitled",
+                "journal": journal,
+                "year": year,
+                "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
+                "abstract": abstract,
+            }
+        )
+    return rows
+
+
+def _topic_seed_by_model(model_type: str) -> str:
+    if model_type == "dental":
+        return (
+            "dental caries periapical lesion impacted tooth panoramic x-ray guideline"
+        )
+    return "colorectal polyp colonoscopy surveillance guideline endoscopic management"
+
+
+async def _fetch_pubmed_web_evidence(query: str, model_type: str) -> Optional[dict]:
+    search_query = f"{_topic_seed_by_model(model_type)} {query[:220]}"
+    timeout = httpx.Timeout(WEB_EVIDENCE_TIMEOUT_SECONDS)
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            esearch_params = {
+                "db": "pubmed",
+                "term": search_query,
+                "retmode": "json",
+                "retmax": str(WEB_EVIDENCE_MAX_ARTICLES),
+                "sort": "relevance",
+            }
+            esearch_res = await client.get(PUBMED_ESEARCH_URL, params=esearch_params)
+            esearch_res.raise_for_status()
+            ids = esearch_res.json().get("esearchresult", {}).get("idlist", [])
+            pmids = [str(x).strip() for x in ids if str(x).strip()]
+            if not pmids:
+                return None
+
+            efetch_params = {
+                "db": "pubmed",
+                "id": ",".join(pmids),
+                "retmode": "xml",
+            }
+            efetch_res = await client.get(PUBMED_EFETCH_URL, params=efetch_params)
+            efetch_res.raise_for_status()
+            articles = _parse_pubmed_articles(efetch_res.text)
+    except Exception:
+        return None
+
+    if not articles:
+        return None
+
+    evidence_lines = []
+    sources = []
+    for idx, article in enumerate(articles, start=1):
+        preview = _compact_text(
+            article.get("abstract") or article.get("title"), max_len=260
+        )
+        evidence_lines.append(
+            f"{idx}) {article['title']} ({article['journal']}, {article['year']})\n- 핵심: {preview}\n- URL: {article['url']}"
+        )
+        sources.append(
+            {
+                "source_file": f"PubMed:{article['pmid']}",
+                "page": "web",
+                "content_preview": preview,
+                "url": article["url"],
+            }
+        )
+
+    answer = "\n\n".join(evidence_lines)
+    return {
+        "query_used": _compact_text(search_query, max_len=200),
+        "query_source": "web_fallback",
+        "answer": answer,
+        "sources": sources,
+        "num_sources": len(sources),
+        "grounded": True,
+        "reason": "web_pubmed_fallback",
+        "disclaimer": "인터넷(PubMed) 검색 기반 참고 정보입니다. 최종 의료 판단은 전문의 상담이 필요합니다.",
+    }
+
+
 # ── 앱 초기화 (lifespan 패턴) ──────────────────────────────────
 # @app.on_event("startup") 는 deprecated → asynccontextmanager lifespan 사용
 @asynccontextmanager
@@ -85,12 +305,22 @@ async def lifespan(app: FastAPI):
     for model_name, model_path in MODEL_PATHS.items():
         if Path(model_path).exists():
             models[model_name] = YOLO(model_path)
-            print(f"[V1] {model_name} 모델 로드 완료: {model_path}")
+            logger.info(
+                "model_loaded",
+                stage="v1",
+                model_name=model_name,
+                model_path=model_path,
+            )
         else:
-            print(f"[V1] {model_name} 모델 파일 없음 (스킵): {model_path}")
+            logger.warning(
+                "model_missing",
+                stage="v1",
+                model_name=model_name,
+                model_path=model_path,
+            )
 
     if not models:
-        print("[V1] 경고: 로드된 모델이 없습니다!")
+        logger.warning("no_models_loaded", stage="v1")
 
     # V2: RAG 체인 초기화 (ChromaDB가 있을 때만)
     rag_vectorstore = Path(__file__).parent.parent / "rag" / "vectorstore"
@@ -99,11 +329,15 @@ async def lifespan(app: FastAPI):
             from rag.chain import MedicalRAGChain
 
             rag_chain = MedicalRAGChain()
-            print("[V2] RAG 체인 초기화 완료")
+            logger.info("rag_chain_initialized", stage="v2")
         except Exception as e:
-            print(f"[V2] RAG 초기화 실패 (계속 진행): {e}")
+            logger.exception("rag_chain_init_failed", stage="v2", error=str(e))
     else:
-        print("[V2] RAG 벡터스토어 없음 — 'python rag/ingest.py' 먼저 실행 필요")
+        logger.warning(
+            "rag_vectorstore_missing",
+            stage="v2",
+            action="python rag/ingest.py",
+        )
 
     # V4: VLM 클라이언트 초기화 (ollama + LLaVA)
     try:
@@ -111,14 +345,21 @@ async def lifespan(app: FastAPI):
 
         vlm_client = MedicalVLMClient(timeout=VLM_TIMEOUT_SECONDS)
         if await vlm_client.is_available():
-            print(
-                f"[V4] VLM 초기화 완료 (모델: {vlm_client.model}, timeout: {VLM_TIMEOUT_SECONDS}s)"
+            logger.info(
+                "vlm_initialized",
+                stage="v4",
+                model=vlm_client.model,
+                timeout_seconds=VLM_TIMEOUT_SECONDS,
             )
         else:
-            print(f"[V4] VLM 모델 미설치 또는 ollama 서버 미실행 — VLM 기능 비활성화")
-            print(f"     ollama serve → ollama pull {vlm_client.model}")
+            logger.warning(
+                "vlm_unavailable",
+                stage="v4",
+                model=vlm_client.model,
+                hint="ollama serve && ollama pull model",
+            )
     except Exception as e:
-        print(f"[V4] VLM 초기화 실패 (계속 진행): {e}")
+        logger.exception("vlm_init_failed", stage="v4", error=str(e))
         vlm_client = None
 
     yield  # 서버 실행
@@ -150,6 +391,45 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def request_context_middleware(request, call_next):
+    request_id = bind_request_context(request)
+    request_logger = get_logger("http.request")
+    started_at = time.perf_counter()
+    path = request.url.path
+    method = request.method
+
+    request_logger.info("request_started")
+    try:
+        response = await call_next(request)
+    except Exception:
+        elapsed_seconds = time.perf_counter() - started_at
+        HTTP_REQUEST_TOTAL.labels(method=method, path=path, status_code="500").inc()
+        HTTP_REQUEST_DURATION_SECONDS.labels(method=method, path=path).observe(
+            elapsed_seconds
+        )
+        request_logger.exception("request_failed")
+        raise
+    else:
+        elapsed_seconds = time.perf_counter() - started_at
+        elapsed_ms = round(elapsed_seconds * 1000, 2)
+        HTTP_REQUEST_TOTAL.labels(
+            method=method, path=path, status_code=str(response.status_code)
+        ).inc()
+        HTTP_REQUEST_DURATION_SECONDS.labels(method=method, path=path).observe(
+            elapsed_seconds
+        )
+        response.headers["X-Request-ID"] = request_id
+        request_logger.info(
+            "request_finished",
+            status_code=response.status_code,
+            duration_ms=elapsed_ms,
+        )
+        return response
+    finally:
+        clear_request_context()
+
+
 @app.get("/demo", include_in_schema=False)
 def demo_page():
     demo_path = Path(__file__).parent.parent / "ui" / "demo.html"
@@ -162,8 +442,16 @@ def demo_page():
 # example_test/ 에 있는 의료 샘플 이미지를 데모에서 바로 써볼 수 있게 제공
 SAMPLE_DIR = Path(__file__).parent.parent / "example_test"
 SAMPLE_REGISTRY = {
-    "colon_polyp": {"file": "colon_polyp.jpg", "model_type": "polyp", "label": "대장 내시경 (폴립)"},
-    "dental_xray": {"file": "dental_xray.png", "model_type": "dental", "label": "치과 파노라마 X-ray"},
+    "colon_polyp": {
+        "file": "colon_polyp.jpg",
+        "model_type": "polyp",
+        "label": "대장 내시경 (폴립)",
+    },
+    "dental_xray": {
+        "file": "dental_xray.png",
+        "model_type": "dental",
+        "label": "치과 파노라마 X-ray",
+    },
 }
 
 
@@ -229,6 +517,11 @@ def health():
     }
 
 
+@app.get("/metrics")
+def metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 @app.post("/predict")
 async def predict(
     file: UploadFile = File(..., description="추론할 이미지 파일"),
@@ -264,10 +557,13 @@ async def predict(
 
     # 바이트 -> numpy 배열 -> OpenCV 이미지
     contents = await file.read()
+    _validate_upload_size(contents)
     nparr = np.frombuffer(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         raise HTTPException(400, "이미지 디코딩 실패")
+
+    infer_started_at = time.perf_counter()
 
     # 추론
     results = model.predict(img, conf=conf, verbose=False)
@@ -291,12 +587,107 @@ async def predict(
 
             detections.append(det)
 
+    elapsed = _observe_inference("predict", model_type, infer_started_at)
+    logger.info(
+        "predict_completed",
+        model_type=model_type,
+        detections=len(detections),
+        duration_ms=round(elapsed * 1000, 2),
+    )
+
     return {
         "filename": file.filename,
         "model_type": model_type,
         "image_size": {"width": img.shape[1], "height": img.shape[0]},
         "detections": detections,
         "count": len(detections),
+    }
+
+
+@app.post("/explain")
+async def explain_with_heatmap(
+    file: UploadFile = File(..., description="설명 가능한 분석 대상 이미지"),
+    conf: float = 0.25,
+    model_type: str = Form("polyp", description="YOLOv8 모델 선택: polyp / dental"),
+):
+    if not models:
+        raise HTTPException(503, "로드된 모델 없음")
+
+    if model_type not in models:
+        available = list(models.keys())
+        raise HTTPException(
+            400,
+            f"'{model_type}' 모델이 없습니다. 사용 가능: {available}",
+        )
+
+    if file.content_type and not file.content_type.startswith("image/"):
+        raise HTTPException(400, f"이미지 파일만 가능 (받은 타입: {file.content_type})")
+
+    contents = await file.read()
+    _validate_upload_size(contents)
+    nparr = np.frombuffer(contents, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img is None:
+        raise HTTPException(400, "이미지 디코딩 실패")
+
+    model = models[model_type]
+    infer_started_at = time.perf_counter()
+    results = model.predict(img, conf=conf, verbose=False)
+    result = results[0]
+
+    h, w = img.shape[:2]
+    heatmap = np.zeros((h, w), dtype=np.float32)
+    detections = []
+
+    if result.boxes is not None:
+        for i, box in enumerate(result.boxes):
+            conf_score = float(box.conf)
+            x1, y1, x2, y2 = [int(v) for v in box.xyxy[0].tolist()]
+            x1, y1 = max(0, x1), max(0, y1)
+            x2, y2 = min(w - 1, x2), min(h - 1, y2)
+            if x2 > x1 and y2 > y1:
+                heatmap[y1:y2, x1:x2] = np.maximum(heatmap[y1:y2, x1:x2], conf_score)
+
+            if result.masks is not None and i < len(result.masks):
+                polygon = np.array(result.masks[i].xy[0], dtype=np.int32)
+                polygon[:, 0] = np.clip(polygon[:, 0], 0, w - 1)
+                polygon[:, 1] = np.clip(polygon[:, 1], 0, h - 1)
+                cv2.fillPoly(heatmap, [polygon], color=conf_score)
+
+            detections.append(
+                {
+                    "class": result.names[int(box.cls)],
+                    "confidence": round(conf_score, 4),
+                    "bbox": [x1, y1, x2, y2],
+                }
+            )
+
+    max_val = float(heatmap.max())
+    if max_val > 0:
+        heatmap = heatmap / max_val
+    heatmap_u8 = np.clip(heatmap * 255.0, 0, 255).astype(np.uint8)
+    colored = cv2.applyColorMap(heatmap_u8, cv2.COLORMAP_JET)
+    overlay = cv2.addWeighted(img, 0.6, colored, 0.4, 0.0)
+
+    ok, encoded = cv2.imencode(".jpg", overlay, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+    if not ok:
+        raise HTTPException(500, "설명용 오버레이 인코딩 실패")
+
+    elapsed = _observe_inference("explain", model_type, infer_started_at)
+    logger.info(
+        "explain_completed",
+        model_type=model_type,
+        detections=len(detections),
+        duration_ms=round(elapsed * 1000, 2),
+    )
+
+    return {
+        "filename": file.filename,
+        "model_type": model_type,
+        "method": "activation_heatmap",
+        "count": len(detections),
+        "detections": detections,
+        "overlay_jpeg_base64": base64.b64encode(encoded.tobytes()).decode("utf-8"),
     }
 
 
@@ -394,10 +785,13 @@ async def analyze_with_knowledge(
         raise HTTPException(400, f"이미지 파일만 가능 (받은 타입: {file.content_type})")
 
     contents = await file.read()
+    _validate_upload_size(contents)
     nparr = np.frombuffer(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         raise HTTPException(400, "이미지 디코딩 실패")
+
+    infer_started_at = time.perf_counter()
 
     results = model.predict(img, conf=conf, verbose=False)
     result = results[0]
@@ -435,7 +829,7 @@ async def analyze_with_knowledge(
             "Deep Caries": "깊은 충치",
             "Periapical Lesion": "치근단 병변",
         }
-        detected_kr = [class_names_kr.get(c, c) for c in detected_classes]
+        detected_kr = [class_names_kr.get(c) or c for c in detected_classes]
         class_text = ", ".join(detected_kr)
 
         # 검출 결과를 자연어 질의로 변환
@@ -466,6 +860,15 @@ async def analyze_with_knowledge(
                 "error": f"RAG 질의 실패: {str(e)}",
             }
 
+    elapsed = _observe_inference("analyze", model_type, infer_started_at)
+    logger.info(
+        "analyze_completed",
+        model_type=model_type,
+        detections=len(detections),
+        rag_used=rag_chain is not None,
+        duration_ms=round(elapsed * 1000, 2),
+    )
+
     return {
         "filename": file.filename,
         "model_type": model_type,
@@ -476,6 +879,86 @@ async def analyze_with_knowledge(
         "medical_knowledge": medical_knowledge,
         "rag_available": rag_chain is not None,
     }
+
+
+async def _process_vlm_job(
+    job_id: str,
+    filename: str,
+    contents: bytes,
+    conf: float,
+    model_type: str,
+    language: str,
+) -> None:
+    async_jobs[job_id]["status"] = "running"
+    async_jobs[job_id]["started_at"] = time.time()
+
+    upload = UploadFile(filename=filename, file=io.BytesIO(contents))
+
+    try:
+        result = await vlm_analyze_with_knowledge(
+            file=upload,
+            conf=conf,
+            model_type=model_type,
+            language=language,
+        )
+        async_jobs[job_id]["status"] = "completed"
+        async_jobs[job_id]["result"] = result
+    except Exception as e:
+        async_jobs[job_id]["status"] = "failed"
+        async_jobs[job_id]["error"] = str(e)
+        logger.exception("async_vlm_job_failed", job_id=job_id, error=str(e))
+    finally:
+        async_jobs[job_id]["finished_at"] = time.time()
+        await upload.close()
+
+
+@app.post("/vlm-analyze/async", status_code=202)
+async def vlm_analyze_async(
+    file: UploadFile = File(..., description="비동기 분석할 의료 이미지"),
+    conf: float = 0.25,
+    model_type: str = Form("polyp", description="YOLOv8 모델 선택: polyp / dental"),
+    language: str = Form("ko", description="VLM 분석 언어: ko(한국어) / en(영어)"),
+):
+    if file.content_type and not file.content_type.startswith("image/"):
+        raise HTTPException(400, f"이미지 파일만 가능 (받은 타입: {file.content_type})")
+
+    contents = await file.read()
+    _validate_upload_size(contents)
+    job_id = str(uuid.uuid4())
+    async_jobs[job_id] = {
+        "job_id": job_id,
+        "status": "pending",
+        "created_at": time.time(),
+        "result": None,
+        "error": None,
+        "filename": file.filename,
+        "model_type": model_type,
+    }
+
+    asyncio.create_task(
+        _process_vlm_job(
+            job_id=job_id,
+            filename=file.filename or "unknown",
+            contents=contents,
+            conf=conf,
+            model_type=model_type,
+            language=language,
+        )
+    )
+    logger.info("async_vlm_job_created", job_id=job_id, model_type=model_type)
+    return {
+        "job_id": job_id,
+        "status": "pending",
+        "poll_endpoint": f"/jobs/{job_id}",
+    }
+
+
+@app.get("/jobs/{job_id}")
+def get_job_status(job_id: str):
+    job = async_jobs.get(job_id)
+    if job is None:
+        raise HTTPException(404, f"job_id를 찾을 수 없습니다: {job_id}")
+    return job
 
 
 # ── V4: VLM 통합 분석 엔드포인트 (VLM + Detection + RAG) ──────
@@ -515,10 +998,13 @@ async def vlm_analyze_with_knowledge(
         raise HTTPException(400, f"이미지 파일만 가능 (받은 타입: {file.content_type})")
 
     contents = await file.read()
+    _validate_upload_size(contents)
     nparr = np.frombuffer(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         raise HTTPException(400, "이미지 디코딩 실패")
+
+    infer_started_at = time.perf_counter()
 
     response_data = {
         "filename": file.filename,
@@ -625,7 +1111,7 @@ async def vlm_analyze_with_knowledge(
                 "Deep Caries": "깊은 충치",
                 "Periapical Lesion": "치근단 병변",
             }
-            detected_kr = [class_names_kr.get(c, c) for c in detected_classes]
+            detected_kr = [class_names_kr.get(c) or c for c in detected_classes]
             keyword_hint = ", ".join(detected_kr) if detected_kr else "검출 클래스 없음"
             rag_query = (
                 f"다음 의료 영상 분석 소견에 대한 임상 근거와 "
@@ -641,7 +1127,7 @@ async def vlm_analyze_with_knowledge(
                 "Deep Caries": "깊은 충치",
                 "Periapical Lesion": "치근단 병변",
             }
-            detected_kr = [class_names_kr.get(c, c) for c in detected_classes]
+            detected_kr = [class_names_kr.get(c) or c for c in detected_classes]
             class_text = ", ".join(detected_kr)
             rag_query = (
                 f"{class_text}이(가) 검출되었습니다. "
@@ -653,8 +1139,30 @@ async def vlm_analyze_with_knowledge(
                 rag_result = await rag_chain.query(rag_query)
                 has_evidence = rag_result.get("num_sources", 0) > 0
                 answer_text = rag_result.get("answer", NO_EVIDENCE_TEXT)
+                fallback_reason = None
+                sources_payload = [
+                    {
+                        "source_file": s["source_file"],
+                        "page": s["page"],
+                        "content_preview": s["content_preview"],
+                    }
+                    for s in rag_result.get("sources", [])
+                ]
                 if not has_evidence:
-                    answer_text = NO_EVIDENCE_TEXT
+                    web_evidence = await _fetch_pubmed_web_evidence(
+                        query=rag_query,
+                        model_type=model_type,
+                    )
+                    if web_evidence:
+                        answer_text = web_evidence.get("answer", NO_EVIDENCE_TEXT)
+                        sources_payload = web_evidence.get("sources", [])
+                        fallback_reason = web_evidence.get(
+                            "reason", "web_pubmed_fallback"
+                        )
+                        has_evidence = web_evidence.get("num_sources", 0) > 0
+                    else:
+                        answer_text = NO_EVIDENCE_TEXT
+                        fallback_reason = "no_evidence"
 
                 medical_evidence = {
                     "query_used": rag_query[:200] + "..."
@@ -664,17 +1172,13 @@ async def vlm_analyze_with_knowledge(
                     if "interpretation" in (vlm_analysis or {})
                     else "detection",
                     "answer": answer_text,
-                    "sources": [
-                        {
-                            "source_file": s["source_file"],
-                            "page": s["page"],
-                            "content_preview": s["content_preview"],
-                        }
-                        for s in rag_result["sources"]
-                    ],
-                    "num_sources": rag_result["num_sources"],
+                    "sources": sources_payload,
+                    "num_sources": len(sources_payload),
                     "grounded": has_evidence,
-                    "reason": None if has_evidence else "no_evidence",
+                    "reason": fallback_reason,
+                    "disclaimer": "인터넷(PubMed) 검색 기반 참고 정보입니다. 최종 의료 판단은 전문의 상담이 필요합니다."
+                    if fallback_reason == "web_pubmed_fallback"
+                    else None,
                 }
             except Exception as e:
                 error_text = str(e)
@@ -688,5 +1192,15 @@ async def vlm_analyze_with_knowledge(
     response_data["medical_evidence"] = medical_evidence
     response_data["rag_available"] = rag_chain is not None
     response_data["vlm_available"] = vlm_client is not None
+
+    elapsed = _observe_inference("vlm_analyze", model_type, infer_started_at)
+    logger.info(
+        "vlm_analyze_completed",
+        model_type=model_type,
+        detections=len(detections),
+        vlm_available=vlm_client is not None,
+        rag_available=rag_chain is not None,
+        duration_ms=round(elapsed * 1000, 2),
+    )
 
     return response_data

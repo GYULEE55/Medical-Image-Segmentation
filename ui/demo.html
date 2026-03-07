@@ -258,7 +258,7 @@
 
     .result-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(380px, 0.92fr) minmax(440px, 1.08fr);
       gap: 12px;
     }
 
@@ -267,12 +267,21 @@
       border-radius: 12px;
       overflow: hidden;
       background: #fff;
-      min-height: 360px;
+      min-height: 0;
+    }
+
+    .media-stage {
+      height: clamp(320px, 48vh, 560px);
+      background: #f5f7fb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .json-pane {
       display: flex;
       flex-direction: column;
+      max-height: min(78vh, 980px);
     }
 
     .pane-head {
@@ -318,7 +327,7 @@
 
     .insight-row {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
       gap: 10px;
       padding: 8px 10px;
@@ -377,11 +386,12 @@
       border: 1px solid var(--line);
       background: #fff;
       color: #2a3955;
-      border-radius: 8px;
-      padding: 6px 9px;
-      font-size: 0.74rem;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.88rem;
       font-weight: 800;
       cursor: pointer;
+      flex-shrink: 0;
     }
 
     .toggle-btn:hover {
@@ -398,14 +408,16 @@
       height: 100%;
       display: block;
       object-fit: contain;
+      object-position: center center;
       background: #f5f7fb;
-      min-height: 300px;
+      min-height: 0;
     }
 
     .media.hidden { display: none; }
 
     .media-placeholder {
-      min-height: 300px;
+      height: 100%;
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -441,17 +453,18 @@
 
     .insights {
       border-top: 1px solid var(--line);
-      padding: 10px;
+      padding: 12px;
       background: #fcfdff;
       display: grid;
-      gap: 8px;
+      gap: 10px;
+      overflow: auto;
     }
 
     .insight-card {
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: 12px;
       background: #fff;
-      padding: 10px;
+      padding: 12px;
     }
 
     .insight-card.warn-card {
@@ -475,8 +488,8 @@
     }
 
     .insight-body {
-      font-size: 0.9rem;
-      line-height: 1.45;
+      font-size: 0.96rem;
+      line-height: 1.55;
       color: #22314f;
       white-space: pre-wrap;
       word-break: break-word;
@@ -512,7 +525,7 @@
     .source-list {
       margin: 0;
       padding-left: 16px;
-      font-size: 0.84rem;
+      font-size: 0.9rem;
       color: #2b3d5c;
       line-height: 1.45;
       white-space: normal;
@@ -532,6 +545,8 @@
       .layout { grid-template-columns: 1fr; }
       .result-grid { grid-template-columns: 1fr; }
       .summary { grid-template-columns: 1fr 1fr; }
+      .json-pane { max-height: none; }
+      .media-stage { height: clamp(260px, 45vh, 440px); }
     }
   </style>
 </head>
@@ -602,8 +617,10 @@
       <section class="result-grid">
         <article class="pane">
           <div class="pane-head">Uploaded Image</div>
-          <div id="previewPlaceholder" class="media-placeholder">아직 선택된 이미지가 없습니다.</div>
-          <img id="preview" class="media" alt="uploaded preview">
+          <div class="media-stage">
+            <div id="previewPlaceholder" class="media-placeholder">아직 선택된 이미지가 없습니다.</div>
+            <img id="preview" class="media" alt="uploaded preview">
+          </div>
         </article>
 
         <article class="pane json-pane">
@@ -617,7 +634,7 @@
             <div class="badge-set" id="badges">
               <span class="badge">대기</span>
             </div>
-            <span class="badge">Summary View</span>
+            <button id="toggleJsonBtn" class="toggle-btn" type="button">Summary View</button>
           </div>
           <pre id="output" class="hidden">{
   "message": "아직 요청 전입니다."
@@ -687,6 +704,7 @@
     const insightRagEl = document.getElementById("insightRag");
     const noEvidenceCardEl = document.getElementById("noEvidenceCard");
     const insightSourcesEl = document.getElementById("insightSources");
+    const toggleJsonBtn = document.getElementById("toggleJsonBtn");
 
     let timerHandle = null;
     let startedAt = null;
@@ -770,6 +788,15 @@
       }
     }
 
+    function normalizeDisplayText(value) {
+      const text = String(value || "-")
+        .replace(/\*\*/g, "")
+        .replace(/^\s*\*\s+/gm, "- ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+      return text || "-";
+    }
+
     function confidenceLabel(conf) {
       if (typeof conf !== "number") return "-";
       if (conf >= 0.7) return "높음";
@@ -798,16 +825,25 @@
         setInsight(insightSourcesEl, "출처 없음");
         return;
       }
-      const lines = src.slice(0, 5).map((s) => {
-        const file = fileNameOnly(s?.source_file);
+      const seen = new Set();
+      const lines = [];
+      src.forEach((s) => {
+        const file = fileNameOnly(s?.source_file) || "unknown";
         const page = formatPageValue(s?.page);
-        return `- ${file} (${page})`;
+        const maybeUrl = String(s?.url || "").trim();
+        const row = maybeUrl
+          ? `- ${file} (${page})\n  URL: ${maybeUrl}`
+          : `- ${file} (${page})`;
+        if (!seen.has(row)) {
+          seen.add(row);
+          lines.push(row);
+        }
       });
       setInsight(insightSourcesEl, lines.join("\n"));
     }
 
     function applyCollapsibleText(el, btnEl, fullText, limit = 200) {
-      const text = String(fullText || "-").trim() || "-";
+      const text = normalizeDisplayText(fullText);
       if (text.length <= limit) {
         el.textContent = text;
         btnEl.style.display = "none";
@@ -863,7 +899,7 @@
         setInsight(insightVlmEl, "문헌 근거가 부족해 VLM 해석 문장은 숨겼습니다. (오해 방지)", "warn");
         vlmMoreBtn.style.display = "none";
       } else if (payload?.vlm_analysis?.interpretation) {
-        applyCollapsibleText(insightVlmEl, vlmMoreBtn, payload.vlm_analysis.interpretation, 200);
+        applyCollapsibleText(insightVlmEl, vlmMoreBtn, payload.vlm_analysis.interpretation, 320);
       } else if (payload?.vlm_analysis?.error) {
         setInsight(insightVlmEl, payload.vlm_analysis.error, "warn");
         vlmMoreBtn.style.display = "none";
@@ -877,14 +913,18 @@
       if (payload?.medical_evidence?.reason === "no_evidence") {
         setInsight(insightRagEl, "제공된 문서에서 해당 정보를 찾을 수 없습니다.", "warn");
         noEvidenceCardEl.style.display = "block";
+      } else if (payload?.medical_evidence?.reason === "web_pubmed_fallback") {
+        const disclaimer = payload?.medical_evidence?.disclaimer ? `\n\n[안내] ${payload.medical_evidence.disclaimer}` : "";
+        setInsight(insightRagEl, `${normalizeDisplayText(payload?.medical_evidence?.answer)}${disclaimer}`);
+        noEvidenceCardEl.style.display = "none";
       } else if (payload?.medical_evidence?.answer) {
-        const answer = String(payload.medical_evidence.answer);
-        setInsight(insightRagEl, answer.slice(0, 280) + (answer.length > 280 ? "..." : ""));
+        const answer = normalizeDisplayText(payload.medical_evidence.answer);
+        setInsight(insightRagEl, answer);
       } else if (payload?.medical_evidence?.error) {
         setInsight(insightRagEl, payload.medical_evidence.error, "warn");
       } else if (payload?.medical_knowledge?.answer) {
-        const answer = String(payload.medical_knowledge.answer);
-        setInsight(insightRagEl, answer.slice(0, 280) + (answer.length > 280 ? "..." : ""));
+        const answer = normalizeDisplayText(payload.medical_knowledge.answer);
+        setInsight(insightRagEl, answer);
       } else if (payload?.medical_knowledge?.error) {
         setInsight(insightRagEl, payload.medical_knowledge.error, "warn");
       } else {
@@ -946,6 +986,7 @@
       setPreview(null);
       outputEl.textContent = JSON.stringify({ message: "초기화 완료" }, null, 2);
       outputEl.classList.add("hidden");
+      toggleJsonBtn.textContent = "Summary View";
       setSummary("-", "-", "-");
       setBadges([{ label: "대기" }]);
       setInsight(insightSummaryEl, "요청 후 결과 요약이 표시됩니다.");
@@ -973,6 +1014,17 @@
     clearBtn.addEventListener("click", () => {
       fileEl.value = "";
       resetView();
+    });
+
+    toggleJsonBtn.addEventListener("click", () => {
+      const isHidden = outputEl.classList.contains("hidden");
+      if (isHidden) {
+        outputEl.classList.remove("hidden");
+        toggleJsonBtn.textContent = "Raw JSON Hide";
+      } else {
+        outputEl.classList.add("hidden");
+        toggleJsonBtn.textContent = "Summary View";
+      }
     });
 
     async function runAnalysis(file) {
@@ -1015,6 +1067,8 @@
         }
 
         outputEl.textContent = JSON.stringify(payload, null, 2);
+        outputEl.classList.add("hidden");
+        toggleJsonBtn.textContent = "Summary View";
         renderInsights(response, payload);
 
         const detCount = typeof payload.count === "number" ? String(payload.count) : "-";
@@ -1039,6 +1093,9 @@
               phaseHintEl.textContent = "응답 성공. 단, RAG 근거 생성은 실패했습니다 (예: OpenAI quota).";
               setStatus(`완료(부분): HTTP ${response.status}`, "warn");
               badgeItems.push({ label: "RAG WARN", tone: "warn" });
+            } else if (payload?.medical_evidence?.reason === "web_pubmed_fallback") {
+              phaseHintEl.textContent = "로컬 문헌 근거가 부족해 PubMed 웹 근거를 자동으로 보강했습니다.";
+              badgeItems.push({ label: "WEB EVIDENCE", tone: "ok" });
             } else if (payload?.medical_evidence?.reason === "no_evidence") {
               phaseHintEl.textContent = "응답 성공. 다만 현재 문서 근거가 부족해 RAG 답변을 제한했습니다.";
               setStatus(`완료(근거부족): HTTP ${response.status}`, "warn");

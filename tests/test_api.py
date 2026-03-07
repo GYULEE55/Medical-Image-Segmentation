@@ -2,7 +2,7 @@
 FastAPI 엔드포인트 테스트 (pytest)
 
 실행:
-    cd "project practice"
+    cd 프로젝트 루트
     python -m pytest tests/test_api.py -v
 
 테스트 구조:
@@ -427,3 +427,47 @@ class TestVLMAnalyze:
         )
         assert response.status_code == 200
         assert response.json()["model_type"] == "polyp"
+
+
+class TestMetrics:
+    def test_metrics_endpoint_returns_prometheus_text(self, client):
+        response = client.get("/metrics")
+        assert response.status_code == 200
+        assert "text/plain" in response.headers.get("content-type", "")
+        assert "medical_http_requests_total" in response.text
+
+
+class TestExplain:
+    def test_explain_returns_overlay(self, client, sample_image_bytes):
+        response = client.post(
+            "/explain",
+            files={"file": ("test.jpg", sample_image_bytes, "image/jpeg")},
+            data={"model_type": "polyp"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["method"] == "activation_heatmap"
+        assert "overlay_jpeg_base64" in data
+        assert isinstance(data["overlay_jpeg_base64"], str)
+
+
+class TestAsyncVLM:
+    def test_async_vlm_job_lifecycle(self, client, sample_image_bytes):
+        create_response = client.post(
+            "/vlm-analyze/async",
+            files={"file": ("test.jpg", sample_image_bytes, "image/jpeg")},
+            data={"model_type": "polyp"},
+        )
+        assert create_response.status_code == 202
+        payload = create_response.json()
+        assert "job_id" in payload
+        job_id = payload["job_id"]
+
+        status_response = client.get(f"/jobs/{job_id}")
+        assert status_response.status_code == 200
+        status_payload = status_response.json()
+        assert status_payload["status"] in ("pending", "running", "completed", "failed")
+
+    def test_async_job_not_found(self, client):
+        response = client.get("/jobs/not-found")
+        assert response.status_code == 404

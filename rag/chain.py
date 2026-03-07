@@ -31,6 +31,9 @@ except ImportError:
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
+from core.structured_logging import get_logger
+
+logger = get_logger("rag.chain")
 
 # ── 경로 설정 ──────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
@@ -141,7 +144,7 @@ class MedicalRAGChain:
                 "먼저 'python rag/ingest.py'를 실행해 문서를 인덱싱하세요."
             )
 
-        print("[RAG] 임베딩 모델 로드 중 (BAAI/bge-m3)...")
+        logger.info("embedding_model_loading", stage="rag", model="BAAI/bge-m3")
         # BGE-M3: 한국어+영어 의료 문서 동시 처리 가능
         embeddings = HuggingFaceEmbeddings(
             model_name="BAAI/bge-m3",
@@ -149,7 +152,7 @@ class MedicalRAGChain:
             encode_kwargs={"normalize_embeddings": True},
         )
 
-        print("[RAG] ChromaDB 로드 중...")
+        logger.info("vectorstore_loading", stage="rag", path=str(CHROMA_DIR))
         self._vector_store = Chroma(
             collection_name=COLLECTION_NAME,
             embedding_function=embeddings,
@@ -163,7 +166,7 @@ class MedicalRAGChain:
         )
 
         llm = self._build_llm()
-        print(f"[RAG] LLM provider: {self.provider}")
+        logger.info("llm_provider_selected", stage="rag", provider=self.provider)
 
         # LCEL 체인 조립 (현대적 패턴)
         # RetrievalQA.from_chain_type() 는 deprecated → create_retrieval_chain 사용
@@ -176,7 +179,7 @@ class MedicalRAGChain:
         self._qa_chain = create_stuff_documents_chain(llm, prompt)
         self._chain = create_retrieval_chain(retriever, self._qa_chain)
 
-        print("[RAG] 초기화 완료 ✅")
+        logger.info("rag_initialized", stage="rag")
 
     def _format_sources(self, docs: list) -> list[dict]:
         sources = []
