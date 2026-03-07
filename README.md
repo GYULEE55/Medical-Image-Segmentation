@@ -1,241 +1,131 @@
-# 프로젝트 리뷰 — Medical AI Assistant
+# Medical Image Segmentation AI
 
-> 이 문서는 Medical AI Assistant 프로젝트 종합 정리본입니다.
-> 핵심은 "무엇을 만들었는지"보다 "왜 만들었고, 어떻게 검증했는지"에 있습니다.
+[![CI](https://github.com/your-username/Medical-Image-Segmentation/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/Medical-Image-Segmentation/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
----
-
-## 1. 프로젝트 한 줄 요약
-
-의료영상(내시경/X-ray)에서 병변을 검출하고, VLM으로 해석을 보강하고, RAG로 문헌 근거를 연결해 결과를 검증 가능하게 만든 End-to-End 의료 AI PoC입니다.
+End-to-end medical AI system: **YOLOv8 Instance Segmentation → RAG Evidence Retrieval → VLM Interpretation**
 
 ---
 
-## 2. 해결하려는 문제와 접근
+## Architecture
 
-### 사용자 관점 문제
+```mermaid
+flowchart LR
+    A[Medical Image] --> B[YOLOv8n-seg\nDetection]
+    B --> C{Findings}
+    C --> D[RAG\nLangChain + ChromaDB]
+    C --> E[VLM\nLLaVA via Ollama]
+    D --> F[Clinical Report]
+    E --> F
+    F --> G[FastAPI Response\n+ Prometheus Metrics]
+```
 
-- "탐지됨"만으로는 의사결정이 어려움
-- 영상량 증가로 판독 부담이 커지고 작은 병변 미검출 위험 존재
-- 근거 없는 AI 설명은 신뢰를 떨어뜨림
+**V1→V4 Architecture Evolution:**
 
-### 해결 방향
-
-- 검출(YOLO): 병변 위치/신뢰도 정량 제공
-- 해석(VLM): 영상의 정성적 소견 보강
-- 근거(RAG): 문헌 출처 기반 설명 제공
-- 안전가드: 근거 부족 시 추측 대신 "근거 없음" 반환
-
-### 한 줄 가치 제안
-
-"정확도 데모 중심 AI를, 사용자가 이해하고 검증 가능한 의료 보조 도구 형태로 전환한 프로젝트"
-
----
-
-## 3. 프로젝트 동기
-
-- 대장 내시경에서 폴립 miss rate가 보고됨(문헌 기준)
-- 기존 파이프라인은 Detection 또는 LLM 중심으로 분절되는 경우가 많음
-- 실제 현장에서는 검출 결과와 해석 근거를 한 흐름으로 확인할 수 있어야 함
-
-따라서 본 프로젝트는 검출 결과를 자동 질의로 연결하고, 문헌 기반 설명까지 같은 흐름에서 반환하도록 설계했습니다.
+| Version | Feature | Tech |
+|---------|---------|------|
+| V1 | YOLOv8 Detection API | FastAPI, YOLOv8n-seg |
+| V2 | RAG Evidence Retrieval | LangChain, ChromaDB, BGE-M3 |
+| V3 | VLM Integration | LLaVA, Ollama |
+| V4 | Async Jobs + Monitoring | Prometheus, structlog, SQLite |
 
 ---
 
-## 4. 아키텍처 진화 (V1 → V4)
+## Quick Start
 
-| 버전 | 핵심 기능 | 개선 포인트 |
-|------|-----------|-------------|
-| V1 | YOLO 기반 병변 세그멘테이션 | 검출/마스크 기반 정량 결과 확보 |
-| V2 | RAG 의료 지식 응답 | 문헌 출처 기반 설명 추가 |
-| V3 | 검출 결과와 RAG 자동 연동 | 클래스 기반 자동 질의 생성 |
-| V4 | VLM + Detection + RAG 통합 | 정량 + 정성 + 근거 3축 응답 |
+```bash
+git clone https://github.com/your-username/Medical-Image-Segmentation.git
+cd Medical-Image-Segmentation
+pip install -e .
+uvicorn api.app:app --reload
+```
 
-### 버전별 요약
-
-- V1: Kvasir-SEG 1,000장 학습 기반 검출
-- V2: ChromaDB + LLM으로 근거 응답 구조화
-- V3: 검출 결과를 자동 질의로 변환해 파이프라인 통합
-- V4: VLM 해석을 결합해 검출 한계를 보완
+> Requires: Python 3.10+, Ollama (for VLM), OpenAI API key (for RAG). Copy `.env.example` to `.env` and fill in your keys.
 
 ---
 
-## 5. 기술 선택 근거
+## API Endpoints
 
-### 5-1. 왜 YOLOv8인가
-
-| 고려 항목 | YOLOv8-seg | 대안 대비 |
-|-----------|:---:|-----------|
-| 실시간 추론 | 우수 | 의료 영상 워크플로우에 유리 |
-| Detection + Segmentation | 가능 | 단일 모델 파이프라인 구성 용이 |
-| 경량 배포(CPU) | 가능 | 운영 환경 제약 대응 |
-| 소규모 데이터 전이학습 | 유리 | 초기 PoC 구축 속도 확보 |
-
-선택 이유:
-1. 실시간성
-2. 경량성(운영 전환 유리)
-3. 검출+마스크 동시 처리
-4. 전이학습 활용성
-
-### 5-2. 왜 RAG를 직접 구축했나
-
-- 최신 가이드라인 반영 필요
-- 출처 없는 답변은 의료 도메인에서 신뢰성 낮음
-- 검증 가능한 설명 제공이 핵심
-
-| 구성 요소 | 선택 |
-|-----------|------|
-| Embedding | BGE-M3 |
-| VectorDB | ChromaDB |
-| LLM | GPT-4o-mini |
-| Framework | LangChain LCEL |
-
-### 5-3. PubMed 근거 보강(fallback) 설계
-
-- 배경: 내부 RAG 문서에서 근거를 찾지 못하면 설명 품질이 급격히 떨어질 수 있음
-- 목적: "근거 없음" 상태를 줄이고, 출처 확인 가능한 설명을 유지
-- 트리거: `no_evidence` 상황에서 PubMed 웹 검색으로 자동 전환
-
-동작 방식:
-
-1. eSearch로 질의와 연관된 PMID 후보 검색
-2. eFetch로 논문 메타데이터(제목/저널/연도) 수집
-3. 응답에 출처 URL과 함께 근거 카드 구성
-
-응답 정책:
-
-- `reason: web_pubmed_fallback`로 fallback 동작 여부 명시
-- `sources[].url` 필드에 PubMed 링크 제공
-- `disclaimer`를 통해 참고 정보 성격을 명확히 표시
-
-운영 파라미터:
-
-- `WEB_EVIDENCE_TIMEOUT_SECONDS`: 웹 근거 조회 타임아웃
-- `WEB_EVIDENCE_MAX_ARTICLES`: 최대 참고 논문 수
-
-기대 효과:
-
-- 근거 미검출 상황에서도 설명 공백 완화
-- 사용자 관점에서 출처 추적성과 검증 가능성 강화
-
-### 5-4. 서빙/인프라 선택
-
-- FastAPI: async 처리, 타입 검증, 문서화
-- Docker: 재현성, 배포 용이성, 환경 일관성
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Server status + loaded models |
+| `/predict` | POST | YOLOv8 instance segmentation |
+| `/ask` | POST | RAG-based medical Q&A |
+| `/analyze` | POST | Vision + LLM integrated analysis |
+| `/vlm-analyze` | POST | VLM interpretation (LLaVA) |
+| `/vlm-analyze/async` | POST | Async VLM job submission |
+| `/jobs/{job_id}` | GET | Async job status |
+| `/explain` | POST | Overlay visualization |
+| `/metrics` | GET | Prometheus metrics |
 
 ---
 
-## 6. 성과 지표
+## Results
 
-### 6-1. Kvasir-SEG (50 epochs)
+| Dataset | Task | mAP@50 | Precision | Recall | Images | Epochs |
+|---------|------|--------|-----------|--------|--------|--------|
+| Kvasir-SEG | Polyp Segmentation | **0.942** | 0.930 | 0.897 | 1,000 | 50 |
+| DENTEX | Dental X-ray (4-class) | 0.344 | 0.485 | 0.334 | 700 | 100 |
 
-| Metric | Box | Mask |
-|--------|:---:|:---:|
-| Precision | 0.920 | 0.930 |
-| Recall | 0.887 | 0.897 |
-| mAP@50 | 0.939 | 0.942 |
-| mAP@50-95 | 0.777 | 0.786 |
-
-### 6-2. DENTEX (100 epochs, Best: epoch 83)
-
-| Metric | Box | Mask |
-|--------|:---:|:---:|
-| Precision | 0.485 | 0.485 |
-| Recall | 0.334 | 0.334 |
-| mAP@50 | 0.377 | 0.344 |
-| mAP@50-95 | 0.242 | 0.225 |
-
-### 6-3. 데이터셋 성능 차이 해석
-
-| 항목 | Kvasir-SEG | DENTEX |
-|------|:---:|:---:|
-| 클래스 수 | 1 | 4 |
-| 클래스당 데이터 규모 | 큼 | 상대적으로 작음 |
-| 영상 특성 | 컬러 내시경 | 흑백 X-ray |
-| 병변 경계 | 비교적 뚜렷 | 상대적으로 모호 |
-
-개선 방향:
-- 증강 강화
-- 모델 스케일업
-- 클래스 불균형 대응
-- 해상도/학습전략 최적화
-
-### 6-4. 의료 도메인 관점 포인트
-
-- Recall은 미검출 리스크와 직결되어 중요도가 높음
-- Precision은 불필요한 추가 검사 비용과 연결됨
-- 단일 수치보다 운영 맥락에서의 균형 해석이 필요함
+> DENTEX covers 4 classes (Caries, Deep Caries, Periapical Lesion, Impacted) on limited data.
+> See [docs/DENTEX_ANALYSIS.md](docs/DENTEX_ANALYSIS.md) for detailed analysis and improvement roadmap.
 
 ---
 
-## 7. 트러블슈팅
+## Tech Stack
 
-| 문제 | 원인 | 해결 |
-|------|------|------|
-| numpy 빌드 실패 | Python/패키지 버전 충돌 | LangChain/Ultralytics 버전 정합성 조정 |
-| OpenCV 한글 경로 | 비ASCII 경로 처리 한계 | `np.fromfile + cv2.imdecode` 우회 |
-| load_dotenv 간헐 이슈 | reload 환경에서 변수 로딩 일관성 문제 | `override=True` + 모듈 단위 방어 로딩 |
-| LangChain deprecated API | 구버전 체인 패턴 사용 | LCEL 최신 패턴으로 마이그레이션 |
-
----
-
-## 8. 엔지니어링 실천
-
-- 테스트: API 정상/예외 케이스 중심 검증
-- 실험관리: SQLite 기반 경량 실험 기록
-- 배포: Docker 환경으로 재현성 확보
-- 코드 품질: 타입 검증, 에러 핸들링, 모듈 경계 분리
+| Category | Technology |
+|----------|-----------|
+| Detection | YOLOv8n-seg (Ultralytics) |
+| RAG | LangChain LCEL, ChromaDB, BGE-M3 embeddings |
+| VLM | LLaVA via Ollama REST API |
+| API | FastAPI, uvicorn, Prometheus metrics |
+| Infra | Docker, GitHub Actions CI |
+| Logging | structlog (JSON structured logs) |
+| Experiment Tracking | SQLite (custom experiment DB) |
 
 ---
 
-## 9. 데이터 파이프라인
+## Project Structure
 
-### Kvasir-SEG
-
-- 바이너리 마스크에서 contour 추출
-- polygon 변환 및 좌표 정규화
-- 학습/검증 분할 고정(seed)
-
-### DENTEX
-
-- COCO JSON 기반 segmentation 변환
-- 카테고리 매핑 후 YOLO seg 형식 정규화
-- train/val 분할 및 실험 반복 구조화
-
----
-
-## 10. 멀티모델 확장 포인트
-
-- 동일 아키텍처를 위장/치과 도메인에 확장
-- 모델 선택 실행 구조를 통해 도메인 추가 용이성 확보
-- 신규 도메인 도입 시 데이터/모델/매핑 계층 확장으로 대응 가능
+```
+├── api/              # FastAPI application (routers, middleware)
+├── rag/              # RAG pipeline (LangChain + ChromaDB)
+├── vlm/              # VLM client (LLaVA via Ollama)
+├── core/             # Structured logging utilities
+├── db/               # Experiment tracking (SQLite)
+├── eval/             # Benchmark scripts
+├── training/         # Training scripts (Colab-ready)
+├── preprocessing/    # Dataset preparation (Kvasir-SEG, DENTEX)
+├── tests/            # pytest suite (36 tests)
+├── scripts/          # Utility scripts (ONNX export)
+├── docs/             # Documentation
+├── Dockerfile        # Production container (Python 3.10-slim)
+├── docker-compose.yml
+├── pyproject.toml    # Standard Python packaging
+└── Makefile          # Common commands
+```
 
 ---
 
-## 11. 면접 대비 핵심 질문(요약)
+## Development
 
-- 가장 어려웠던 점: 모듈 간 인터페이스 연결 설계
-- 왜 해당 스택을 썼는지: 현장 제약(속도/근거/재현성) 기준 선택
-- 성능 개선 방향: 데이터/모델/학습전략의 균형 최적화
-- 신뢰성 확보 방식: 근거 기반 응답 + no-evidence 가드
+```bash
+make test          # Run pytest (36 tests)
+make lint          # Ruff linting
+make docker-build  # Build Docker image
+make ingest        # Index RAG documents
+make export-onnx   # Export model to ONNX
+```
 
----
-
-## 12. 기술 스택 요약
-
-| 분류 | 기술 |
-|------|------|
-| Model | YOLOv8n-seg |
-| Training | Google Colab T4 |
-| Serving | FastAPI + Uvicorn |
-| RAG | LangChain LCEL + ChromaDB |
-| Embedding | BAAI/bge-m3 |
-| LLM | GPT-4o-mini |
-| Database | SQLite |
-| Infra | Docker + docker-compose |
-| Test | pytest |
-| Language | Python |
+**Run with Docker:**
+```bash
+docker-compose up
+```
 
 ---
 
-원칙: 이 문서는 "문제 정의 → 설계 근거 → 검증 결과" 흐름으로 읽히도록 유지합니다.
+## Model Card
+
+See [MODEL_CARD.md](MODEL_CARD.md) for detailed model information, limitations, and ethical considerations.
