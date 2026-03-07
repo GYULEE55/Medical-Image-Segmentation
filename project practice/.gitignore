@@ -33,3 +33,9 @@ Thumbs.db
 
 # RAG 벡터스토어 (용량 큼)
 rag/vectorstore/
+
+# pytest 캐시
+.pytest_cache/
+
+# AI 코딩 도구 설정 (레포에 노출 금지)
+AGENTS.md
