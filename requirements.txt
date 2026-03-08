@@ -6,7 +6,7 @@ ultralytics==8.4.14
 opencv-python-headless==4.10.0.84
 # numpy는 이미 설치됨 (2.4.2) — 별도 설치 불필요
 
-# ── V2: Medical RAG (LangChain + ChromaDB) ────────────────────
+# ── V2: Medical RAG (LangChain + LangGraph + ChromaDB) ────────
 # Python 3.13 호환 버전 (numpy<2.0 제한 없음)
 langchain==0.3.27
 langchain-core==0.3.83
@@ -16,6 +16,7 @@ langchain-huggingface==0.3.1
 langchain-ollama==0.2.3
 langchain-openai==0.3.35
 langchain-text-splitters==0.3.11
+langgraph>=0.2.0
 
 # 임베딩 모델 (BGE-M3 로컬 실행)
 sentence-transformers>=3.0.0
