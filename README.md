@@ -195,8 +195,10 @@ Medical-Image-Segmentation/
 │   ├── CLINICAL_PROBLEM_MAP.md # 현장 문제-기술 매핑
 │   └── SETUP_MACBOOK.md     # 로컬 실행 가이드
 │
-├── 🐳 Dockerfile            # 프로덕션 컨테이너
-├── docker-compose.yml
+├── 🐳 docker/               # Docker 관련 파일
+│   ├── Dockerfile           # 프로덕션 컨테이너
+│   └── docker-compose.yml   # 서비스 실행 + 볼륨 설정
+│
 ├── pyproject.toml           # 패키징 + ruff + pytest 설정
 ├── config.yaml              # 학습/추론 하이퍼파라미터
 ├── MODEL_CARD.md            # 모델 한계 + 윤리 고려사항

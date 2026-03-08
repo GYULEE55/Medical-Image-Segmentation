@@ -1,6 +1,8 @@
 services:
   api:
-    build: .
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -10,12 +12,12 @@ services:
       # .env 파일에서 OPENAI_API_KEY 자동 로드 (V2 RAG용)
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     env_file:
-      - .env
+      - ../.env
     volumes:
       # RAG 벡터스토어 (컨테이너 재시작해도 유지)
-      - ./rag/vectorstore:/app/rag/vectorstore
+      - ../rag/vectorstore:/app/rag/vectorstore
       # RAG 문서 폴더 (PDF 추가 시 컨테이너 재빌드 불필요)
-      - ./rag/docs:/app/rag/docs
+      - ../rag/docs:/app/rag/docs
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

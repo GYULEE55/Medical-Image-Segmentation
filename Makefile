@@ -10,7 +10,10 @@ lint:
 	ruff check .
 
 docker-build:
-	docker build -t medical-ai .
+	docker build -f docker/Dockerfile -t medical-ai .
+
+docker-up:
+	docker compose -f docker/docker-compose.yml up
 
 ingest:
 	python rag/ingest.py
