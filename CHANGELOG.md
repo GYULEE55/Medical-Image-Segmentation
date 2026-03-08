@@ -4,6 +4,24 @@
 
 ---
 
+## [V5] 2026-03-08 — LangGraph StateGraph 전환
+
+### 변경 사항
+- `rag/chain.py` 전체 재작성: LangChain LCEL `create_retrieval_chain` → LangGraph `StateGraph`
+- 노드 4개: `retrieve`, `generate`, `format_sources`, `no_evidence`
+- 조건부 엣지 2개:
+  - `check_relevance` — 관련 문서 없음 → `no_evidence`로 라우팅 (환각 원천 차단)
+  - `check_answer` — LLM 응답 이상 감지 → `no_evidence`로 라우팅
+- 외부 인터페이스 동일 유지: `query()`, `query_sync()`, `is_ready` 변경 없음
+- `requirements.txt`, `pyproject.toml`에 `langgraph>=0.2.0` 추가
+- 테스트 36개 통과 확인
+
+### 전환 이유
+LCEL은 선형 파이프라인에 적합하지만 조건 분기가 if문으로 숨겨짐.  
+LangGraph는 워크플로우를 그래프 구조로 명시적 표현 → 디버깅·추적 용이.
+
+---
+
 ## [Refactor] 2026-03 — 프로덕션 수준 리팩토링
 
 ### 구조 개선
