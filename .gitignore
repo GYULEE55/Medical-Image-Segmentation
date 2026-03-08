@@ -45,3 +45,8 @@ AGENTS.md
 
 # 비교 CSV (임시)
 compare_csc/
+
+# docs 내부용 파일 (취업용/개인용, GitHub 불필요)
+docs/STORY_PITCH.md
+docs/RESUME_PROJECT_DESCRIPTION.md
+docs/AI_JOB_MODEL_UPGRADE_PLAN.md
