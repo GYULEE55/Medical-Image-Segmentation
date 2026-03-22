@@ -16,6 +16,26 @@ YOLOv8 기반 병변 탐지와 LLaVA VLM 해석, RAG 문헌 근거를 하나의 
 
 ---
 
+## 데모
+
+<p align="center">
+  <img src="./assets/demo_result.jpg" width="700"/>
+</p>
+
+---
+
+## 개발 과정
+
+<p align="center">
+  <img src="./assets/dev_process1.jpg" width="700"/>
+</p>
+
+<p align="center">
+  <img src="./assets/dev_process2.jpg" width="700"/>
+</p>
+
+---
+
 ## 성능
 
 **Kvasir-SEG (폴립 세그멘테이션)**
@@ -32,17 +52,8 @@ YOLOv8 기반 병변 탐지와 LLaVA VLM 해석, RAG 문헌 근거를 하나의 
 |------|------|
 | mAP@50 (Mask) | 0.344 |
 
-> DENTEX 성능이 낮은 이유는 데이터 부족(클래스당 ~175장)과 파노라마 X-ray 저대비 문제입니다. 원인 분석 문서 → [docs/DENTEX_ANALYSIS.md](docs/DENTEX_ANALYSIS.md)
-
----
-
-## 주요 기능
-
-- YOLOv8n-seg 기반 위장내시경 / 치과 X-ray 병변 탐지
-- LLaVA(Ollama) 기반 병변 정성 해석 (비동기 처리)
-- LangGraph StateGraph 기반 RAG 파이프라인 (no-evidence 가드)
-- PubMed 논문 38개 + PDF 문서 인덱싱 (ChromaDB)
-- FastAPI 기반 REST API
+> DENTEX 성능이 낮은 이유는 데이터 부족(클래스당 ~175장)과 파노라마 X-ray 저대비 문제입니다.  
+> 원인 분석 → [docs/DENTEX_ANALYSIS.md](docs/DENTEX_ANALYSIS.md)
 
 ---
 
