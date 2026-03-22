@@ -24,6 +24,7 @@
 
 ## 데모
 
+**웹페이지 데모 이미지**
 <p align="center">
   <img src="./assets/demo_ui.jpg" width="720"/>
 </p>
