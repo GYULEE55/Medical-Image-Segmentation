@@ -25,6 +25,10 @@
 ## 데모
 
 <p align="center">
+  <img src="./assets/demo_ui.jpg" width="720"/>
+</p>
+
+<p align="center">
   <img src="./assets/demo_result.jpg" width="720"/>
 </p>
 
