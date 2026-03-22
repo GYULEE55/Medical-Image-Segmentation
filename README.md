@@ -22,13 +22,20 @@
 
 ---
 
-## 웹 데모
+## 데모
 
 <p align="center">
   <img src="./assets/demo_result.jpg" width="720"/>
 </p>
 
-입력 이미지를 선택하면 `/vlm-analyze` 엔드포인트 기준으로 근거 있음/부족 배지와 출처 카드까지 함께 표시됩니다 (보통 40~120초).
+**VLM + RAG 통합 응답 예시**
+
+<p align="center">
+  <img src="./assets/demo_vlm_rag.jpg" width="720"/>
+</p>
+
+> 왼쪽: VLM이 내시경 영상을 분석해 영상 종류·관찰 소견·추정 소견을 한국어로 설명  
+> 오른쪽: RAG가 관련 문헌을 검색해 출처(문서명·페이지)와 함께 근거 반환
 
 ---
 
