@@ -34,8 +34,37 @@
   <img src="./assets/demo_vlm_rag.jpg" width="720"/>
 </p>
 
-> 왼쪽: VLM이 내시경 영상을 분석해 영상 종류·관찰 소견·추정 소견을 한국어로 설명  
-> 오른쪽: RAG가 관련 문헌을 검색해 출처(문서명·페이지)와 함께 근거 반환
+> VLM이 내시경 영상의 관찰 소견을 설명하고, RAG가 관련 문헌과 출처를 함께 반환합니다.
+
+---
+
+## 개발 과정
+
+<p align="center">
+  <img src="./assets/dev_process1.jpg" width="720"/>
+</p>
+
+**1. 데이터 전처리**
+- 내시경·치과 X-ray 데이터 3,000장을 Colab에서 YOLO 학습 형식으로 변환
+- 원본 데이터 형식 차이를 통일해 학습 가능한 데이터셋으로 재구성
+
+**2. RAG 문헌 준비**
+- 의료 문서(PDF/TXT/MD)를 수집해 텍스트로 로드
+- chunk_size=512, overlap=64 단위로 분할
+- BGE-M3 임베딩 후 ChromaDB(Vectorstore)에 저장
+- 결과: 1,207 청크, 벡터스토어 인덱싱 완료
+
+**3. 모델 학습**
+- 같은 모델 구조로 데이터셋별 파라미터를 분리해 학습
+
+| 구분 | Epochs | Batch | Img Size | Patience |
+|------|--------|-------|----------|----------|
+| Kvasir (Polyp) | 50 | 16 | 640 | 10 |
+| DENTEX (Dental) | 100 | 16 | 640 | 15 |
+
+**4. 통합 서빙 검증**
+- FastAPI로 `/predict`, `/analyze`, `/vlm-analyze` API 제공
+- `/health` 응답으로 YOLO(2개 모델)·RAG·VLM 초기화 상태 확인해 실제 서비스 동작 검증
 
 ---
 
@@ -86,18 +115,6 @@ cp .env.example .env
 make ingest    # RAG 문서 인덱싱 (최초 1회)
 make serve     # API 서버 실행
 ```
-
----
-
-## 주요 엔드포인트
-
-| 엔드포인트 | 설명 |
-|-----------|------|
-| `POST /predict` | YOLOv8 병변 탐지 |
-| `POST /analyze` | 탐지 + RAG 자동 연동 |
-| `POST /ask` | RAG 기반 의료 Q&A |
-| `POST /vlm-analyze/async` | 비동기 VLM 이미지 해석 |
-| `GET /jobs/{job_id}` | 비동기 작업 결과 조회 |
 
 ---
 
