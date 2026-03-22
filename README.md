@@ -28,10 +28,6 @@
   <img src="./assets/demo_ui.jpg" width="720"/>
 </p>
 
-<p align="center">
-  <img src="./assets/demo_result.jpg" width="720"/>
-</p>
-
 **VLM + RAG 통합 응답 예시**
 
 <p align="center">
