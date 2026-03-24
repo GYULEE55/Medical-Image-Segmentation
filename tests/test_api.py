@@ -18,10 +18,9 @@ FastAPI 엔드포인트 테스트 (pytest)
     - parametrize: 동일 로직을 여러 입력으로 반복 테스트
 """
 
-import io
-import pytest
-import numpy as np
 import cv2
+import numpy as np
+import pytest
 from fastapi.testclient import TestClient
 
 # ── app 임포트 ──────────────────────────────────────────────────

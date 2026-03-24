@@ -17,22 +17,16 @@ Medical VLM Client — ollama + LLaVA 연동 모듈
     - V3→V4 차이: Detection 의존 → VLM 직접 해석 (학습 안 된 병변도 설명 가능)
 """
 
-import os
-import base64
-import json
 import asyncio
+import base64
+import os
 from pathlib import Path
-from typing import Optional, Dict, Any
-from urllib.parse import urljoin
+from typing import Any, Dict, Optional
 
-# .env에서 OLLAMA_HOST 등 환경변수 로드
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent / ".env", override=True)
-
-# HTTP 클라이언트 — ollama REST API 호출용
-# httpx: async 지원 HTTP 클라이언트 (requests의 async 버전)
-import httpx
 
 
 # ── 설정 ──────────────────────────────────────────────────────────
@@ -121,9 +115,7 @@ class MedicalVLMClient:
         self.timeout = timeout
 
         # 언어별 프롬프트 선택
-        self.system_prompt = (
-            MEDICAL_VLM_PROMPT_KR if language == "ko" else MEDICAL_VLM_PROMPT
-        )
+        self.system_prompt = MEDICAL_VLM_PROMPT_KR if language == "ko" else MEDICAL_VLM_PROMPT
 
         # httpx 비동기 클라이언트 (재사용 — 매 요청마다 생성하면 비효율)
         self._client = httpx.AsyncClient(
@@ -216,9 +208,7 @@ class MedicalVLMClient:
                 "이미지가 너무 크거나 서버 부하가 높을 수 있습니다."
             )
         except httpx.HTTPStatusError as e:
-            raise RuntimeError(
-                f"ollama API 오류: {e.response.status_code} — {e.response.text}"
-            )
+            raise RuntimeError(f"ollama API 오류: {e.response.status_code} — {e.response.text}")
 
         result = response.json()
 
@@ -243,7 +233,7 @@ class MedicalVLMClient:
     async def analyze_with_context(
         self,
         image_bytes: bytes,
-        detection_results: Optional[list] = None,
+        detection_results: Optional[list[dict[str, Any]]] = None,
         model_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -303,7 +293,6 @@ class MedicalVLMClient:
 
 # ── 로컬 테스트 ────────────────────────────────────────────────
 if __name__ == "__main__":
-    import sys
 
     async def test_vlm():
         """VLM 클라이언트 테스트"""
@@ -332,7 +321,7 @@ if __name__ == "__main__":
             print("VLM 분석 중... (30초~1분 소요)")
             result = await client.analyze_image(image_bytes)
 
-            print(f"\n[분석 결과]")
+            print("\n[분석 결과]")
             print(f"모델: {result['model']}")
             print(f"소요 시간: {result['total_duration_ms']}ms")
             print(f"해석:\n{result['analysis']}")

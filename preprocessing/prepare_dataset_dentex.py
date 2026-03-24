@@ -35,7 +35,12 @@ YOLO 세그멘테이션 라벨 포맷:
   drive.mount('/content/drive')
 
   # 셀 2: 스크립트 실행
-  %run /content/drive/MyDrive/Python.Algrithm/project\ practice/preprocessing/prepare_dataset_dentex.py
+  from pathlib import Path
+  script_path = Path(
+      "/content/drive/MyDrive/Python.Algrithm/project practice/"
+      "preprocessing/prepare_dataset_dentex.py"
+  )
+  %run {script_path}
 """
 
 import json
@@ -45,6 +50,7 @@ import shutil
 import zipfile
 from collections import defaultdict
 from pathlib import Path
+from typing import Optional
 
 # ─────────────────────────────────────────────────
 # 설정 (Colab 환경에 맞게 수정 가능)
@@ -63,15 +69,15 @@ OUTPUT_DIR = Path("/content/drive/MyDrive/datasets/dentex")
 
 # DENTEX 4개 클래스 (categories_3 기준)
 CLASS_NAMES = {
-    0: "Impacted",         # 매복치
-    1: "Caries",           # 충치
-    2: "Periapical Lesion", # 치근단병변
-    3: "Deep Caries",      # 깊은충치
+    0: "Impacted",  # 매복치
+    1: "Caries",  # 충치
+    2: "Periapical Lesion",  # 치근단병변
+    3: "Deep Caries",  # 깊은충치
 }
 NUM_CLASSES = len(CLASS_NAMES)
 
 
-def extract_zip(zip_path: Path, extract_to: Path) -> Path:
+def extract_zip(zip_path: Path, extract_to: Path) -> Optional[Path]:
     """
     ZIP 파일 압축 해제.
     이미지가 들어있는 폴더 경로를 반환합니다.
@@ -81,11 +87,11 @@ def extract_zip(zip_path: Path, extract_to: Path) -> Path:
         return None
 
     print(f"  압축 해제 중: {zip_path.name} → {extract_to}")
-    with zipfile.ZipFile(str(zip_path), 'r') as zf:
+    with zipfile.ZipFile(str(zip_path), "r") as zf:
         zf.extractall(str(extract_to))
 
     # ZIP 내부에 폴더가 있을 수 있음 — 이미지 파일 탐색
-    image_exts = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff'}
+    image_exts = {".jpg", ".jpeg", ".png", ".bmp", ".tiff"}
     for root, dirs, files in os.walk(str(extract_to)):
         image_files = [f for f in files if Path(f).suffix.lower() in image_exts]
         if image_files:
@@ -96,28 +102,28 @@ def extract_zip(zip_path: Path, extract_to: Path) -> Path:
     return None
 
 
-def find_annotation_json(search_dir: Path) -> Path:
+def find_annotation_json(search_dir: Path) -> Optional[Path]:
     """
     디렉토리에서 COCO 포맷 JSON 어노테이션 파일을 탐색합니다.
     training_data.zip 내부에 어노테이션이 포함되어 있을 수 있음.
     """
     for root, dirs, files in os.walk(str(search_dir)):
         for f in files:
-            if f.endswith('.json') and 'triple' in f.lower():
+            if f.endswith(".json") and "triple" in f.lower():
                 return Path(root) / f
-            if f.endswith('.json') and ('train' in f.lower() or 'annotation' in f.lower()):
+            if f.endswith(".json") and ("train" in f.lower() or "annotation" in f.lower()):
                 return Path(root) / f
 
     # 아무 JSON이라도 찾기
     for root, dirs, files in os.walk(str(search_dir)):
         for f in files:
-            if f.endswith('.json'):
+            if f.endswith(".json"):
                 json_path = Path(root) / f
                 # COCO 포맷인지 간단 확인
                 try:
                     with open(json_path) as jf:
                         data = json.load(jf)
-                    if 'annotations' in data and 'images' in data:
+                    if "annotations" in data and "images" in data:
                         return json_path
                 except Exception:
                     pass
@@ -157,12 +163,14 @@ def load_coco_annotations(json_path: Path):
     cat_id_key = "category_id_3" if "category_id_3" in data["annotations"][0] else "category_id"
 
     for ann in data["annotations"]:
-        annotations_by_image[ann["image_id"]].append({
-            "category_id": ann[cat_id_key],
-            "segmentation": ann["segmentation"],
-            "bbox": ann["bbox"],
-            "area": ann.get("area", 0),
-        })
+        annotations_by_image[ann["image_id"]].append(
+            {
+                "category_id": ann[cat_id_key],
+                "segmentation": ann["segmentation"],
+                "bbox": ann["bbox"],
+                "area": ann.get("area", 0),
+            }
+        )
 
     print(f"  JSON 로드 완료: {json_path.name}")
     print(f"  → 이미지: {len(images_dict)}장")
@@ -212,8 +220,14 @@ def coco_segmentation_to_yolo(segmentation, img_width, img_height, category_id, 
     return lines
 
 
-def convert_dataset(images_dict, annotations_by_image, image_dir, output_dir,
-                    split_name="all", val_ratio=0.0):
+def convert_dataset(
+    images_dict,
+    annotations_by_image,
+    image_dir,
+    output_dir,
+    split_name="all",
+    val_ratio=0.0,
+) -> tuple[dict[str, int], dict[int, int]]:
     """
     COCO 어노테이션을 YOLO seg 포맷으로 변환하고, train/val 분할.
 
@@ -231,14 +245,11 @@ def convert_dataset(images_dict, annotations_by_image, image_dir, output_dir,
         (output_dir / "labels" / split).mkdir(parents=True, exist_ok=True)
 
     # 어노테이션이 있는 이미지만 처리
-    valid_image_ids = [
-        img_id for img_id in images_dict
-        if img_id in annotations_by_image
-    ]
+    valid_image_ids = [img_id for img_id in images_dict if img_id in annotations_by_image]
 
     if not valid_image_ids:
         print("  [경고] 유효한 이미지가 없습니다!")
-        return {"train": 0, "val": 0, "skip": 0}
+        return {"train": 0, "val": 0, "skip": 0}, {}
 
     # Train/Val 분할
     random.seed(SEED)
@@ -247,16 +258,13 @@ def convert_dataset(images_dict, annotations_by_image, image_dir, output_dir,
     if split_name == "all" and val_ratio > 0:
         val_count = int(len(valid_image_ids) * val_ratio)
         val_ids = set(valid_image_ids[:val_count])
-        train_ids = set(valid_image_ids[val_count:])
     elif split_name == "val":
         val_ids = set(valid_image_ids)
-        train_ids = set()
     else:  # train
-        train_ids = set(valid_image_ids)
         val_ids = set()
 
-    stats = {"train": 0, "val": 0, "skip": 0}
-    class_counts = defaultdict(int)
+    stats: dict[str, int] = {"train": 0, "val": 0, "skip": 0}
+    class_counts: defaultdict[int, int] = defaultdict(int)
 
     for img_id in valid_image_ids:
         img_info = images_dict[img_id]
@@ -301,10 +309,10 @@ def convert_dataset(images_dict, annotations_by_image, image_dir, output_dir,
 
         stats[split] += 1
 
-    return stats, class_counts
+    return stats, dict(class_counts)
 
 
-def create_yaml(output_dir: Path, class_names: dict):
+def create_yaml(output_dir: Path, class_names: dict[int, str]):
     """
     YOLOv8 데이터셋 YAML 설정 파일 생성.
     Colab에서 학습 시 이 YAML을 사용합니다.
@@ -351,11 +359,11 @@ def main():
     # 검증 데이터 어노테이션 (확실히 존재)
     val_json = DRIVE_BASE / "validation_triple.json"
     if val_json.exists():
-        val_images, val_anns, val_cats = load_coco_annotations(val_json)
-        print(f"  ✅ 검증 어노테이션 로드 완료")
+        val_images, val_anns, _ = load_coco_annotations(val_json)
+        print("  ✅ 검증 어노테이션 로드 완료")
     else:
-        print(f"  ❌ validation_triple.json 없음!")
-        val_images, val_anns, val_cats = {}, {}, {}
+        print("  ❌ validation_triple.json 없음!")
+        val_images, val_anns = {}, {}
 
     # 훈련 데이터 어노테이션 (ZIP 내부 또는 별도 파일 탐색)
     train_json = None
@@ -377,22 +385,26 @@ def main():
         train_images, train_anns, train_cats = load_coco_annotations(train_json)
         print(f"  ✅ 훈련 어노테이션 로드 완료: {train_json.name}")
     else:
-        print(f"  ⚠️ 훈련 어노테이션 미발견 — 검증 데이터만으로 진행합니다")
-        print(f"     (HuggingFace에서 training annotation을 별도 다운로드해야 할 수 있음)")
+        print("  ⚠️ 훈련 어노테이션 미발견 — 검증 데이터만으로 진행합니다")
+        print("     (HuggingFace에서 training annotation을 별도 다운로드해야 할 수 있음)")
 
     # ── 3단계: YOLO 포맷 변환 ────────────────────────────────
     print("\n[3/4] YOLO seg 포맷 변환")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    total_stats = {"train": 0, "val": 0, "skip": 0}
-    total_class_counts = defaultdict(int)
+    total_stats: dict[str, int] = {"train": 0, "val": 0, "skip": 0}
+    total_class_counts: defaultdict[int, int] = defaultdict(int)
 
     # 훈련 데이터가 있으면 train/val 분할
     if train_images and train_anns and train_img_dir:
         print("\n  --- 훈련 데이터 변환 (train/val 자동 분할) ---")
         stats, cc = convert_dataset(
-            train_images, train_anns, train_img_dir, OUTPUT_DIR,
-            split_name="all", val_ratio=VAL_RATIO,
+            train_images,
+            train_anns,
+            train_img_dir,
+            OUTPUT_DIR,
+            split_name="all",
+            val_ratio=VAL_RATIO,
         )
         for k in stats:
             total_stats[k] += stats[k]
@@ -405,15 +417,23 @@ def main():
             # 훈련 어노테이션 없음 → 검증 데이터를 train/val로 분할
             print("\n  --- 검증 데이터 → train/val 분할 (훈련 어노테이션 없으므로) ---")
             stats, cc = convert_dataset(
-                val_images, val_anns, val_img_dir, OUTPUT_DIR,
-                split_name="all", val_ratio=VAL_RATIO,
+                val_images,
+                val_anns,
+                val_img_dir,
+                OUTPUT_DIR,
+                split_name="all",
+                val_ratio=VAL_RATIO,
             )
         else:
             # 훈련 데이터 있음 → 검증 데이터는 val로만 추가
             print("\n  --- 검증 데이터 → val에 추가 ---")
             stats, cc = convert_dataset(
-                val_images, val_anns, val_img_dir, OUTPUT_DIR,
-                split_name="val", val_ratio=0,
+                val_images,
+                val_anns,
+                val_img_dir,
+                OUTPUT_DIR,
+                split_name="val",
+                val_ratio=0,
             )
         for k in stats:
             total_stats[k] += stats[k]
@@ -431,7 +451,7 @@ def main():
     print(f"  Train: {total_stats['train']}장")
     print(f"  Val:   {total_stats['val']}장")
     print(f"  Skip:  {total_stats['skip']}장")
-    print(f"\n  클래스별 어노테이션 수:")
+    print("\n  클래스별 어노테이션 수:")
     for cls_id in sorted(total_class_counts.keys()):
         name = CLASS_NAMES.get(cls_id, f"unknown_{cls_id}")
         print(f"    [{cls_id}] {name}: {total_class_counts[cls_id]}개")

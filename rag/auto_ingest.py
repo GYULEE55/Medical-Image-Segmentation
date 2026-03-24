@@ -10,7 +10,6 @@ from pathlib import Path
 import httpx
 from dotenv import load_dotenv
 
-
 BASE_DIR = Path(__file__).parent
 DEFAULT_OUTPUT_DIR = BASE_DIR / "docs" / "auto"
 PUBMED_ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"

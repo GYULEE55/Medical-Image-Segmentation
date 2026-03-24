@@ -10,13 +10,13 @@ rag/docs/ 폴더에 PDF 파일을 넣고 실행하면
 rag/vectorstore/ 에 ChromaDB가 생성됩니다.
 """
 
-import os
 from pathlib import Path
 
-from langchain_community.document_loaders import PyMuPDFLoader, TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+from langchain_community.document_loaders import PyMuPDFLoader, TextLoader
+from langchain_core.documents import Document
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # ── 경로 설정 ──────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
@@ -32,8 +32,8 @@ CHUNK_SIZE = 512
 CHUNK_OVERLAP = 64
 
 
-def load_documents(doc_dir: Path) -> list:
-    all_docs = []
+def load_documents(doc_dir: Path) -> list[Document]:
+    all_docs: list[Document] = []
     pdf_files = sorted(doc_dir.rglob("*.pdf"))
     text_files = sorted(doc_dir.rglob("*.txt")) + sorted(doc_dir.rglob("*.md"))
 
@@ -62,7 +62,7 @@ def load_documents(doc_dir: Path) -> list:
     return all_docs
 
 
-def chunk_documents(documents: list) -> list:
+def chunk_documents(documents: list[Document]) -> list[Document]:
     """문서를 청크로 분할 (의료 문서 최적화 설정)"""
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
@@ -75,7 +75,7 @@ def chunk_documents(documents: list) -> list:
     return chunks
 
 
-def build_vectorstore(chunks: list) -> Chroma:
+def build_vectorstore(chunks: list[Document]) -> Chroma:
     """BGE-M3 임베딩으로 ChromaDB 벡터스토어 구축"""
     print("\n[임베딩 모델 로드] BAAI/bge-m3 ...")
     print("  (첫 실행 시 모델 다운로드 ~1.5GB, 시간 소요)")
@@ -121,7 +121,7 @@ def main():
 
     # 3. 벡터스토어 구축
     print("\n[3/3] 벡터스토어 구축")
-    vector_store = build_vectorstore(chunks)
+    build_vectorstore(chunks)
 
     print("\n" + "=" * 50)
     print("✅ 인덱싱 완료!")

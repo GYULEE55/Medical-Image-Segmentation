@@ -23,7 +23,6 @@ from pathlib import Path
 
 from db.experiment_db import ExperimentDB
 
-
 METRIC_MAP = {
     "map50": "metrics/mAP50(B)",
     "map50_95": "metrics/mAP50-95(B)",

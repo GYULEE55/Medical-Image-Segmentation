@@ -14,11 +14,12 @@ YOLO 세그멘테이션 라벨 포맷:
   좌표는 0~1로 정규화 (x/width, y/height)
 """
 
+import random
+import shutil
+from pathlib import Path
+
 import cv2
 import numpy as np
-import shutil
-import random
-from pathlib import Path
 
 SEED = 42
 VAL_RATIO = 0.2
@@ -121,7 +122,7 @@ def main():
 
             stats["success"] += 1
 
-    print(f"\n===== 변환 완료 =====")
+    print("\n===== 변환 완료 =====")
     print(f"성공: {stats['success']}장")
     print(f"스킵: {stats['skip']}장")
     print(f"실패: {stats['fail']}장")

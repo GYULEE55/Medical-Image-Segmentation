@@ -2,7 +2,6 @@ from pathlib import Path
 
 from rag.auto_ingest import parse_pubmed_xml, save_articles
 
-
 SAMPLE_XML = """
 <PubmedArticleSet>
   <PubmedArticle>

@@ -6,7 +6,10 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 import api.state as state  # pyright: ignore[reportMissingImports]
 from api.constants import class_names_kr  # pyright: ignore[reportMissingImports]
-from api.services import observe_inference, validate_upload_size  # pyright: ignore[reportMissingImports]
+from api.services import (  # pyright: ignore[reportMissingImports]
+    observe_inference,
+    validate_upload_size,
+)
 from core.structured_logging import get_logger
 
 router = APIRouter()

@@ -27,27 +27,26 @@ LangGraph StateGraph 기반 RAG 파이프라인:
 
 import os
 from pathlib import Path
-from typing import Optional, Annotated
-from typing_extensions import TypedDict
+from typing import Optional, cast
 
 from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).parent.parent / ".env", override=True)
-
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.documents import Document
+from typing_extensions import TypedDict
 
 try:
     from langchain_ollama import ChatOllama
 except ImportError:
     ChatOllama = None
 
-from langgraph.graph import StateGraph, END
+from langgraph.graph import END, StateGraph
 
 from core.structured_logging import get_logger
+
+load_dotenv(Path(__file__).parent.parent / ".env", override=True)
 
 logger = get_logger("rag.chain")
 
@@ -96,13 +95,28 @@ NO_EVIDENCE_ANSWER = "제공된 문서에서 해당 정보를 찾을 수 없습�
 # ── LangGraph State 정의 ───────────────────────────────────────
 # TypedDict로 그래프 전체에서 공유되는 상태를 정의
 # 각 노드는 State를 받아서 변경할 필드만 dict로 반환
+class SourceEntry(TypedDict):
+    source_file: str
+    page: str
+    content_preview: str
+
+
+class QueryResult(TypedDict):
+    answer: str
+    sources: list[SourceEntry]
+    num_sources: int
+
+
+StateUpdate = dict[str, object]
+
+
 class RAGState(TypedDict):
     """RAG 그래프 상태"""
 
     question: str  # 입력 질문
     filtered_docs: list[Document]  # relevance 필터링 통과한 문서
     answer: str  # LLM 생성 답변
-    sources: list[dict]  # 포맷팅된 출처 목록
+    sources: list[SourceEntry]  # 포맷팅된 출처 목록
     num_sources: int  # 출처 수
     is_no_evidence: bool  # no-evidence 가드 발동 여부
 
@@ -214,10 +228,13 @@ class MedicalRAGChain:
         State에서 question을 받아 filtered_docs를 업데이트.
         """
         vector_store = self._vector_store
+        if vector_store is None:
+            raise RuntimeError("RAG vector store is not initialized")
+        vector_store = cast(Chroma, vector_store)
         top_k = self.top_k
         min_relevance = self.min_relevance
 
-        def retrieve(state: RAGState) -> dict:
+        def retrieve(state: RAGState) -> StateUpdate:
             question = state["question"]
             docs_with_scores = vector_store.similarity_search_with_relevance_scores(
                 question, k=top_k
@@ -253,7 +270,7 @@ class MedicalRAGChain:
         )
         chain = prompt | llm
 
-        async def generate(state: RAGState) -> dict:
+        async def generate(state: RAGState) -> StateUpdate:
             question = state["question"]
             docs = state["filtered_docs"]
 
@@ -284,7 +301,7 @@ class MedicalRAGChain:
         )
         chain = prompt | llm
 
-        def generate_sync(state: RAGState) -> dict:
+        def generate_sync(state: RAGState) -> StateUpdate:
             question = state["question"]
             docs = state["filtered_docs"]
             context_text = "\n\n---\n\n".join(doc.page_content for doc in docs)
@@ -296,13 +313,13 @@ class MedicalRAGChain:
         return generate_sync
 
     @staticmethod
-    def _format_sources_node(state: RAGState) -> dict:
+    def _format_sources_node(state: RAGState) -> StateUpdate:
         """
         format_sources 노드: 문서 메타데이터를 출처 딕셔너리로 정제
 
         LCEL 버전의 _format_sources() 에 해당.
         """
-        sources = []
+        sources: list[SourceEntry] = []
         for doc in state["filtered_docs"]:
             raw_page = doc.metadata.get("page", "N/A")
             source_path = doc.metadata.get("source", "unknown")
@@ -317,7 +334,7 @@ class MedicalRAGChain:
         return {"sources": sources, "num_sources": len(sources)}
 
     @staticmethod
-    def _no_evidence_node(state: RAGState) -> dict:
+    def _no_evidence_node(state: RAGState) -> StateUpdate:
         """
         no_evidence 노드: 근거 없음 고정 응답
 
@@ -433,7 +450,7 @@ class MedicalRAGChain:
 
     # ── Public 인터페이스 (LCEL 버전과 동일) ──────────────────
 
-    async def query(self, question: str) -> dict:
+    async def query(self, question: str) -> QueryResult:
         """
         의료 지식 RAG 쿼리 (비동기)
 
@@ -456,7 +473,7 @@ class MedicalRAGChain:
             "is_no_evidence": False,
         }
 
-        final_state = await self._graph.ainvoke(initial_state)
+        final_state = cast(RAGState, await self._graph.ainvoke(initial_state))
 
         return {
             "answer": final_state["answer"],
@@ -464,7 +481,7 @@ class MedicalRAGChain:
             "num_sources": final_state["num_sources"],
         }
 
-    def query_sync(self, question: str) -> dict:
+    def query_sync(self, question: str) -> QueryResult:
         """동기 버전 쿼리 (테스트/스크립트용)"""
         if self._graph is None:
             raise RuntimeError("RAG 그래프가 초기화되지 않았습니다.")
@@ -481,7 +498,7 @@ class MedicalRAGChain:
             "is_no_evidence": False,
         }
 
-        final_state = sync_graph.invoke(initial_state)
+        final_state = cast(RAGState, sync_graph.invoke(initial_state))
 
         return {
             "answer": final_state["answer"],

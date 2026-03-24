@@ -10,8 +10,8 @@ Tables:
     predictions  - 개별 이미지 추론 결과
 """
 
-import sqlite3
 import json
+import sqlite3
 from pathlib import Path
 from typing import Optional
 

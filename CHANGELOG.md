@@ -14,7 +14,7 @@
   - `check_answer` — LLM 응답 이상 감지 → `no_evidence`로 라우팅
 - 외부 인터페이스 동일 유지: `query()`, `query_sync()`, `is_ready` 변경 없음
 - `requirements.txt`, `pyproject.toml`에 `langgraph>=0.2.0` 추가
-- 테스트 36개 통과 확인
+- 테스트 37개 통과 확인
 
 ### 전환 이유
 LCEL은 선형 파이프라인에 적합하지만 조건 분기가 if문으로 숨겨짐.  

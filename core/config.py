@@ -4,8 +4,9 @@
 config.yaml 파일을 읽어서 Python 딕셔너리로 변환합니다.
 """
 
-import yaml
 from pathlib import Path
+
+import yaml
 
 
 def load_config(path: str = "config.yaml") -> dict:

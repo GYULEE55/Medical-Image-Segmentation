@@ -1,4 +1,5 @@
 import argparse
+
 from ultralytics import YOLO
 
 

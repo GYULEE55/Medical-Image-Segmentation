@@ -6,17 +6,23 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import ultralytics
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-import ultralytics
 
 import api.state as state  # pyright: ignore[reportMissingImports]
-from api.constants import MODEL_PATHS, SAMPLE_REGISTRY, VLM_TIMEOUT_SECONDS  # pyright: ignore[reportMissingImports]
+from api.constants import (  # pyright: ignore[reportMissingImports]
+    MODEL_PATHS,
+    SAMPLE_REGISTRY,
+    VLM_TIMEOUT_SECONDS,
+)
 from api.routers.analyze import router as analyze_router  # pyright: ignore[reportMissingImports]
 from api.routers.ask import router as ask_router  # pyright: ignore[reportMissingImports]
-from api.routers.monitoring import router as monitoring_router  # pyright: ignore[reportMissingImports]
+from api.routers.monitoring import (
+    router as monitoring_router,  # pyright: ignore[reportMissingImports]
+)
 from api.routers.predict import router as predict_router  # pyright: ignore[reportMissingImports]
 from api.routers.vlm import router as vlm_router  # pyright: ignore[reportMissingImports]
 from api.state import cleanup_expired_jobs  # pyright: ignore[reportMissingImports]

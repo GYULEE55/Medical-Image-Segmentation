@@ -10,6 +10,7 @@ Google Colab에서 셀별로 복사해서 실행하세요.
 # 재현성을 위해 모든 난수 생성기의 시드를 고정합니다.
 # 이렇게 하면 같은 코드를 여러 번 실행해도 동일한 결과를 얻을 수 있습니다.
 import random
+
 import numpy as np
 import torch
 

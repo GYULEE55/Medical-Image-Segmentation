@@ -5,7 +5,6 @@ import uuid
 import structlog
 from fastapi import Request
 
-
 _CONFIGURED = False
 
 

@@ -7,7 +7,10 @@ from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 import api.state as state  # pyright: ignore[reportMissingImports]
-from api.services import observe_inference, validate_upload_size  # pyright: ignore[reportMissingImports]
+from api.services import (  # pyright: ignore[reportMissingImports]
+    observe_inference,
+    validate_upload_size,
+)
 from core.structured_logging import get_logger
 
 router = APIRouter()
